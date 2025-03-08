@@ -1,0 +1,273 @@
+import React, { useState } from 'react';
+import { MapPin, User, Building, Mail, Phone, Lock, Eye, EyeOff } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { SignupData } from '../services/authService';
+
+interface SignupPageProps {
+  onStateSelect: (state: string) => void;
+}
+
+const SignupPage: React.FC<SignupPageProps> = ({ onStateSelect }) => {
+  const { signup } = useAuth();
+  const [step, setStep] = useState(1);
+  const [selectedState, setSelectedState] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const [formData, setFormData] = useState({
+    fullName: '',
+    operationName: '',
+    email: '',
+    password: '',
+    phoneNumber: ''
+  });
+  
+  const states = [
+    { name: 'Texas', available: true },
+    { name: 'California', available: false },
+    { name: 'New York', available: false },
+    { name: 'Florida', available: false },
+    { name: 'Illinois', available: false },
+    { name: 'Pennsylvania', available: false },
+    { name: 'Ohio', available: false },
+    { name: 'Georgia', available: false },
+    { name: 'North Carolina', available: false },
+    { name: 'Michigan', available: false }
+  ];
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value
+    });
+  };
+  
+  const handleNextStep = () => {
+    setStep(2);
+  };
+  
+  const handleContinue = async () => {
+    if (!selectedState) return;
+    
+    try {
+      setIsSubmitting(true);
+      setError(null);
+      
+      const signupData: SignupData = {
+        email: formData.email,
+        password: formData.password,
+        full_name: formData.fullName,
+        operation_name: formData.operationName,
+        phone_number: formData.phoneNumber,
+        state: selectedState
+      };
+      
+      await signup(signupData);
+      
+      // Continue with the flow
+      onStateSelect(selectedState);
+    } catch (err) {
+      console.error('Signup error:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred during signup');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  const isFormValid = () => {
+    return (
+      formData.fullName.trim() !== '' &&
+      formData.operationName.trim() !== '' &&
+      formData.email.trim() !== '' &&
+      formData.password.trim() !== '' &&
+      formData.phoneNumber.trim() !== ''
+    );
+  };
+  
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+  
+  return (
+    <div className="container mx-auto px-4 py-12 max-w-2xl">
+      <div className="bg-white rounded-lg shadow-lg p-8">
+        <h1 className="text-3xl font-bold text-navy-blue mb-6 text-center font-times">Create Your Account</h1>
+        
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded">
+            {error}
+          </div>
+        )}
+        
+        {step === 1 ? (
+          <>
+            <div className="space-y-4 mb-6">
+              <div>
+                <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <User className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="text"
+                    id="fullName"
+                    name="fullName"
+                    value={formData.fullName}
+                    onChange={handleInputChange}
+                    className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:ring-navy-blue focus:border-navy-blue border p-2"
+                    placeholder="John Doe"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label htmlFor="operationName" className="block text-sm font-medium text-gray-700 mb-1">Operation Name</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Building className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="text"
+                    id="operationName"
+                    name="operationName"
+                    value={formData.operationName}
+                    onChange={handleInputChange}
+                    className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:ring-navy-blue focus:border-navy-blue border p-2"
+                    placeholder="Sunshine Daycare"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Mail className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:ring-navy-blue focus:border-navy-blue border p-2"
+                    placeholder="john@example.com"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Phone className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="tel"
+                    id="phoneNumber"
+                    name="phoneNumber"
+                    value={formData.phoneNumber}
+                    onChange={handleInputChange}
+                    className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:ring-navy-blue focus:border-navy-blue border p-2"
+                    placeholder="(123) 456-7890"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    id="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    className="pl-10 pr-10 block w-full rounded-md border-gray-300 shadow-sm focus:ring-navy-blue focus:border-navy-blue border p-2"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onClick={togglePasswordVisibility}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5 text-gray-400" />
+                    ) : (
+                      <Eye className="h-5 w-5 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <button
+              onClick={handleNextStep}
+              disabled={!isFormValid()}
+              className={`w-full py-2 px-4 rounded ${
+                isFormValid()
+                  ? 'bg-navy-blue text-white hover:bg-blue-800'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              } transition duration-200`}
+            >
+              Next
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">Select Your State</h2>
+              <div className="grid grid-cols-2 gap-4">
+                {states.map((state) => (
+                  <button
+                    key={state.name}
+                    onClick={() => setSelectedState(state.name)}
+                    disabled={!state.available}
+                    className={`p-4 border rounded-lg flex items-center justify-center ${
+                      selectedState === state.name
+                        ? 'border-navy-blue bg-blue-50 text-navy-blue'
+                        : state.available
+                        ? 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+                        : 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
+                    <MapPin className="h-5 w-5 mr-2" />
+                    {state.name}
+                    {!state.available && <span className="ml-2 text-xs">(Coming Soon)</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <div className="flex space-x-4">
+              <button
+                onClick={() => setStep(1)}
+                className="flex-1 py-2 px-4 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition duration-200"
+              >
+                Back
+              </button>
+              <button
+                onClick={handleContinue}
+                disabled={!selectedState || isSubmitting}
+                className={`flex-1 py-2 px-4 rounded ${
+                  selectedState && !isSubmitting
+                    ? 'bg-navy-blue text-white hover:bg-blue-800'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                } transition duration-200`}
+              >
+                {isSubmitting ? 'Creating Account...' : 'Continue'}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default SignupPage;
