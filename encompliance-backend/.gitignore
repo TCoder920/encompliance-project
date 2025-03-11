@@ -1,10 +1,13 @@
-# Python
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
+
+# C extensions
 *.so
+
+# Distribution / packaging
 .Python
-env/
 build/
 develop-eggs/
 dist/
@@ -16,32 +19,24 @@ lib64/
 parts/
 sdist/
 var/
+wheels/
 *.egg-info/
 .installed.cfg
 *.egg
 
-# Virtual Environment
+# Virtual environments
 venv/
-ENV/
 env/
+ENV/
 
-# IDE
+# Environment variables
+.env
+
+# IDE files
 .idea/
 .vscode/
 *.swp
 *.swo
 
-# Environment variables
-.env
-
-# Local storage
-storage/
-
-# Models
-models/
-
 # Logs
-*.log
-
-# Docker
-.dockerignore 
+*.log 
