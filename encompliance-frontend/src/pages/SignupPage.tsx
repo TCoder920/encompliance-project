@@ -1,18 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapPin, User, Building, Mail, Phone, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { SignupData } from '../services/authService';
+import ErrorMessage from '../components/ErrorMessage';
 
 interface SignupPageProps {
   onStateSelect: (state: string) => void;
 }
 
 const SignupPage: React.FC<SignupPageProps> = ({ onStateSelect }) => {
-  const { signup } = useAuth();
+  const { signup, error: authError, clearError } = useAuth();
   const [step, setStep] = useState(1);
   const [selectedState, setSelectedState] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -22,6 +23,13 @@ const SignupPage: React.FC<SignupPageProps> = ({ onStateSelect }) => {
     password: '',
     phoneNumber: ''
   });
+  
+  // Clear errors when component unmounts
+  useEffect(() => {
+    return () => {
+      clearError();
+    };
+  }, [clearError]);
   
   const states = [
     { name: 'Texas', available: true },
@@ -42,18 +50,28 @@ const SignupPage: React.FC<SignupPageProps> = ({ onStateSelect }) => {
       ...formData,
       [name]: value
     });
+    
+    // Clear errors when user starts typing
+    if (localError) setLocalError(null);
+    if (authError) clearError();
   };
   
   const handleNextStep = () => {
     setStep(2);
+    // Clear any errors when moving to next step
+    setLocalError(null);
+    if (authError) clearError();
   };
   
   const handleContinue = async () => {
-    if (!selectedState) return;
+    if (!selectedState) {
+      setLocalError("Please select a state to continue");
+      return;
+    }
     
     try {
       setIsSubmitting(true);
-      setError(null);
+      setLocalError(null);
       
       const signupData: SignupData = {
         email: formData.email,
@@ -66,11 +84,21 @@ const SignupPage: React.FC<SignupPageProps> = ({ onStateSelect }) => {
       
       await signup(signupData);
       
-      // Continue with the flow
-      onStateSelect(selectedState);
+      // Only continue with the flow if there was no error
+      // Check for authError before proceeding
+      if (!authError) {
+        // Continue with the flow
+        onStateSelect(selectedState);
+      } else {
+        console.error('Auth error after signup:', authError);
+      }
     } catch (err) {
+      // Handle any errors not caught by AuthContext
       console.error('Signup error:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred during signup');
+      // Set a user-friendly error message
+      if (!authError && !localError) {
+        setLocalError("There was a problem creating your account. Please try again.");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -95,10 +123,20 @@ const SignupPage: React.FC<SignupPageProps> = ({ onStateSelect }) => {
       <div className="bg-white rounded-lg shadow-lg p-8">
         <h1 className="text-3xl font-bold text-navy-blue mb-6 text-center font-times">Create Your Account</h1>
         
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded">
-            {error}
-          </div>
+        {localError && (
+          <ErrorMessage 
+            message={localError}
+            type="error"
+            onClose={() => setLocalError(null)}
+          />
+        )}
+        
+        {authError && (
+          <ErrorMessage 
+            message={authError}
+            type="error"
+            onClose={clearError}
+          />
         )}
         
         {step === 1 ? (

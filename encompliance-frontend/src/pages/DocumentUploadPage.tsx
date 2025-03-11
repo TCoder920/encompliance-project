@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FileText, ArrowLeft } from 'lucide-react';
 import DocumentUploader from '../components/DocumentUploader';
+import ErrorMessage from '../components/ErrorMessage';
 
 interface DocumentUploadPageProps {
   navigateTo: (page: string) => void;
@@ -8,11 +9,20 @@ interface DocumentUploadPageProps {
 
 const DocumentUploadPage: React.FC<DocumentUploadPageProps> = ({ navigateTo }) => {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   
   const handleUploadComplete = (file: File) => {
-    setUploadedFile(file);
-    // In a real application, you would process the file here
-    // For example, sending it to a server or parsing its contents
+    try {
+      setUploadedFile(file);
+      setError(null);
+      setIsUploading(false);
+      // In a real application, you would process the file here
+    } catch (err) {
+      console.error('Upload error:', err);
+      setError('Failed to process the uploaded file. Please try again.');
+      setIsUploading(false);
+    }
   };
   
   return (
@@ -28,6 +38,16 @@ const DocumentUploadPage: React.FC<DocumentUploadPageProps> = ({ navigateTo }) =
       <div className="bg-white rounded-lg shadow-lg p-8">
         <h1 className="text-3xl font-bold text-navy-blue mb-2 font-times">Document Upload</h1>
         <p className="text-gray-600 mb-8">Upload compliance documents, regulations, or operation manuals for AI analysis and reference.</p>
+        
+        {error && (
+          <div className="mb-4">
+            <ErrorMessage 
+              message={error}
+              type="error"
+              onClose={() => setError(null)}
+            />
+          </div>
+        )}
         
         <div className="mb-8">
           <DocumentUploader 

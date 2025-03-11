@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FileText, ArrowRight } from 'lucide-react';
 import DocumentUploader from '../components/DocumentUploader';
+import ErrorMessage from '../components/ErrorMessage';
 
 interface ManualUploadPageProps {
   operationType: string;
@@ -12,14 +13,41 @@ interface ManualUploadPageProps {
 const ManualUploadPage: React.FC<ManualUploadPageProps> = ({ operationType, onUploadComplete, onBack, onSkip }) => {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleUploadComplete = (file: File) => {
-    setUploadedFile(file);
-    setIsProcessing(true);
-    // Simulate file processing
-    setTimeout(() => {
+    try {
+      setUploadedFile(file);
+      setIsProcessing(true);
+      setError(null);
+      
+      // Simulate file processing
+      setTimeout(() => {
+        setIsProcessing(false);
+      }, 2000);
+    } catch (err) {
+      console.error('Upload processing error:', err);
+      setError('Failed to process the uploaded file. Please try again.');
       setIsProcessing(false);
-    }, 2000);
+    }
+  };
+
+  const handleContinue = () => {
+    try {
+      onUploadComplete();
+    } catch (err) {
+      console.error('Navigation error:', err);
+      setError('Failed to proceed to the next step. Please try again.');
+    }
+  };
+
+  const handleSkip = () => {
+    try {
+      onSkip();
+    } catch (err) {
+      console.error('Skip error:', err);
+      setError('Failed to skip this step. Please try again.');
+    }
   };
 
   return (
@@ -29,6 +57,16 @@ const ManualUploadPage: React.FC<ManualUploadPageProps> = ({ operationType, onUp
         <p className="text-gray-600 mb-8">
           Before accessing the regulations, please upload your operation's operational policy for AI-powered analysis and personalized compliance recommendations.
         </p>
+
+        {error && (
+          <div className="mb-4">
+            <ErrorMessage 
+              message={error}
+              type="error"
+              onClose={() => setError(null)}
+            />
+          </div>
+        )}
 
         <div className="mb-8">
           <DocumentUploader 
@@ -60,7 +98,7 @@ const ManualUploadPage: React.FC<ManualUploadPageProps> = ({ operationType, onUp
             
             <div className="mt-6 flex justify-center">
               <button
-                onClick={onUploadComplete}
+                onClick={handleContinue}
                 disabled={isProcessing}
                 className={`${
                   isProcessing 
@@ -88,7 +126,7 @@ const ManualUploadPage: React.FC<ManualUploadPageProps> = ({ operationType, onUp
 
         <div className="mt-8 pt-6 flex justify-center">
           <button
-            onClick={onSkip}
+            onClick={handleSkip}
             className="text-gray-600 hover:text-navy-blue transition duration-200"
           >
             Upload Later

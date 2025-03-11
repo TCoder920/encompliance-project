@@ -1,57 +1,104 @@
 # Encompliance.io Backend
 
-This is the FastAPI backend for the Encompliance.io compliance platform.
+This is the backend API for the Encompliance.io compliance platform.
+
+## Features
+
+- FastAPI-based REST API
+- PostgreSQL database for user authentication
+- JWT-based authentication
+- Local LLM integration
+- PDF document processing
 
 ## Setup
 
-1. Create a virtual environment:
-   ```bash
-   python -m venv venv
-   ```
+### Prerequisites
 
-2. Activate the virtual environment:
-   - On Windows:
-     ```bash
-     venv\Scripts\activate
-     ```
-   - On macOS/Linux:
-     ```bash
-     source venv/bin/activate
-     ```
+- Python 3.8+
+- PostgreSQL
+- LM Studio (for local model support)
+
+### Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/encompliance-backend.git
+cd encompliance-backend
+```
+
+2. Create a virtual environment:
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
 
 3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+```bash
+pip install -r requirements.txt
+```
 
-4. Create a `.env` file:
-   ```bash
-   cp .env.example .env
-   ```
+4. Set up the PostgreSQL database:
+```bash
+# Create a new PostgreSQL database
+createdb encompliance
+```
 
-5. Edit the `.env` file and add your API keys.
+5. Configure environment variables:
+   - Copy the `.env.example` file to `.env`
+   - Update the values in the `.env` file with your configuration
 
-## Running the Server
+6. Run database migrations:
+```bash
+alembic upgrade head
+```
 
-Start the development server:
-
+7. Start the server:
 ```bash
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-The API will be available at http://localhost:8000.
-
 ## API Documentation
 
+Once the server is running, you can access the API documentation at:
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
 
-## Available Endpoints
+## Authentication
 
-- `POST /api/v1/chat`: Process a chat request and return a response from the LLM.
+The API uses JWT-based authentication. To access protected endpoints:
 
-## Environment Variables
+1. Register a new user:
+```bash
+curl -X POST http://localhost:8000/api/v1/signup \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com", "username": "testuser", "password": "password123"}'
+```
 
-- `OPENAI_API_KEY`: Your OpenAI API key
-- `ANTHROPIC_API_KEY`: Your Anthropic API key
-- `DEFAULT_MODEL`: The default LLM model to use 
+2. Login to get a JWT token:
+```bash
+curl -X POST http://localhost:8000/api/v1/login \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "username=testuser&password=password123"
+```
+
+3. Use the token to access protected endpoints:
+```bash
+curl -X GET http://localhost:8000/api/v1/me \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+## Local Model Integration
+
+To use a local LLM model:
+
+1. Start LM Studio and load your model
+2. Set the following environment variables in your `.env` file:
+```
+USE_LOCAL_MODEL=true
+LOCAL_MODEL_URL=http://127.0.0.1:1234
+LOCAL_MODEL_NAME=your_model_name
+```
+
+## License
+
+[MIT License](LICENSE) 

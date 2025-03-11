@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, MessageSquare, X, Upload, Settings } from 'lucide-react';
 import AIChat from '../components/AIChat';
 import DocumentUploader from '../components/DocumentUploader';
 import AIModelSelector from '../components/AIModelSelector';
+import ErrorMessage from '../components/ErrorMessage';
 
 interface DocumentViewerPageProps {
   operationType: string;
@@ -16,15 +17,32 @@ const DocumentViewerPage: React.FC<DocumentViewerPageProps> = ({ operationType, 
   const [isChatOpen, setIsChatOpen] = useState(true); // Set to true by default
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [selectedAIModel, setSelectedAIModel] = useState('qwen-local');
+  const [selectedAIModel, setSelectedAIModel] = useState('local-model');
   const [showAISettings, setShowAISettings] = useState(false);
   const [activePdfIds, setActivePdfIds] = useState<number[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
   const totalPages = 150; // Placeholder value
   
   const documentTitle = operationType === 'daycare' 
     ? 'Minimum Standards for Licensed and Registered Child-Care Homes (Chapter 746)' 
     : 'Minimum Standards for General Residential Operations (Chapter 748)';
+  
+  // Simulate document loading
+  useEffect(() => {
+    setIsLoading(true);
+    setError(null);
+    
+    // In a real application, this would be a fetch request to load the document
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+      // Uncomment to test error handling:
+      // setError('Failed to load document. Please try again later.');
+    }, 1500);
+    
+    return () => clearTimeout(timer);
+  }, [operationType]);
   
   const handleZoomIn = () => {
     if (zoomLevel < 200) {
@@ -39,22 +57,50 @@ const DocumentViewerPage: React.FC<DocumentViewerPageProps> = ({ operationType, 
   };
   
   const handlePreviousPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
+    try {
+      if (currentPage > 1) {
+        setCurrentPage(currentPage - 1);
+      }
+    } catch (err) {
+      console.error('Navigation error:', err);
+      setError('Could not navigate to the previous page. Please try again.');
     }
   };
   
   const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
+    try {
+      if (currentPage < totalPages) {
+        setCurrentPage(currentPage + 1);
+      }
+    } catch (err) {
+      console.error('Navigation error:', err);
+      setError('Could not navigate to the next page. Please try again.');
     }
   };
   
   const handlePageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const page = parseInt(e.target.value);
-    if (!isNaN(page) && page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
+    try {
+      const page = parseInt(e.target.value);
+      if (!isNaN(page) && page >= 1 && page <= totalPages) {
+        setCurrentPage(page);
+      }
+    } catch (err) {
+      console.error('Page input error:', err);
+      setError('Invalid page number. Please enter a valid page number.');
     }
+  };
+  
+  const handleSearch = () => {
+    if (!searchQuery.trim()) {
+      setError('Please enter a search term');
+      return;
+    }
+    
+    setError(null);
+    // In a real application, this would trigger a search request
+    console.log('Searching for:', searchQuery);
+    // Simulate search failure (uncomment to test)
+    // setError('No results found for your search query');
   };
   
   const toggleChat = () => {
@@ -66,14 +112,29 @@ const DocumentViewerPage: React.FC<DocumentViewerPageProps> = ({ operationType, 
   };
 
   const handleUploadComplete = (file: File) => {
-    setUploadedFile(file);
-    // In a real application, you would process the file here
-    // For example, sending it to a server or parsing its contents
+    try {
+      setUploadedFile(file);
+      setError(null);
+      // In a real application, you would process the file here
+      // For example, sending it to a server or parsing its contents
+    } catch (err) {
+      console.error('Upload error:', err);
+      setError('Failed to process the uploaded file. Please try again.');
+    }
   };
 
   const toggleAISettings = () => {
     setShowAISettings(!showAISettings);
   };
+  
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="flex flex-col h-[calc(100vh-64px-72px)] justify-center items-center">
+        <div className="animate-pulse text-navy-blue text-xl">Loading document...</div>
+      </div>
+    );
+  }
   
   return (
     <div className="flex flex-col h-[calc(100vh-64px-72px)]">
@@ -88,8 +149,15 @@ const DocumentViewerPage: React.FC<DocumentViewerPageProps> = ({ operationType, 
               className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-navy-blue focus:border-transparent"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             />
           </div>
+          <button 
+            onClick={handleSearch}
+            className="bg-navy-blue text-white px-3 py-2 rounded-md hover:bg-blue-700 transition-colors"
+          >
+            Search
+          </button>
         </div>
         
         <div className="text-navy-blue font-semibold truncate max-w-md mx-2">
@@ -164,6 +232,16 @@ const DocumentViewerPage: React.FC<DocumentViewerPageProps> = ({ operationType, 
           </button>
         </div>
       </div>
+      
+      {error && (
+        <div className="mx-4 mt-4">
+          <ErrorMessage 
+            message={error}
+            type="error"
+            onClose={() => setError(null)}
+          />
+        </div>
+      )}
       
       {/* Main content area */}
       <div className="flex flex-grow overflow-hidden">

@@ -1,11 +1,17 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Clock, Search, FileText } from 'lucide-react';
+import ErrorMessage from '../components/ErrorMessage';
+import { useAuth } from '../contexts/AuthContext';
 
 interface DashboardProps {
   navigateTo: (page: string) => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ navigateTo }) => {
+  const { error: authError, clearError } = useAuth();
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  
   // Mock data for query logs
   const queryLogs = [
     {
@@ -40,21 +46,72 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo }) => {
     }
   ];
   
+  useEffect(() => {
+    // Simulate loading data
+    setIsLoading(true);
+    
+    // In a real application, this would be a fetch request to get dashboard data
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
+    
+    return () => {
+      clearTimeout(timer);
+      if (authError) clearError();
+    };
+  }, [authError, clearError]);
+  
+  const handleNavigation = (page: string) => {
+    try {
+      navigateTo(page);
+    } catch (err) {
+      console.error('Navigation error:', err);
+      setLocalError('Unable to navigate to the requested page. Please try again.');
+    }
+  };
+  
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8 flex justify-center items-center h-64">
+        <div className="animate-pulse text-navy-blue">Loading dashboard...</div>
+      </div>
+    );
+  }
+  
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold text-navy-blue mb-6 font-times">Owner Dashboard</h1>
+      
+      {localError && (
+        <ErrorMessage 
+          message={localError}
+          type="error"
+          onClose={() => setLocalError(null)}
+        />
+      )}
+      
+      {authError && (
+        <ErrorMessage 
+          message={authError}
+          type="error"
+          onClose={clearError}
+        />
+      )}
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h2 className="text-xl font-bold text-navy-blue mb-4">Quick Access</h2>
           <button 
-            onClick={() => navigateTo('documentViewer')}
+            onClick={() => handleNavigation('documentViewer')}
             className="w-full bg-navy-blue text-white py-2 px-4 rounded mb-3 flex items-center justify-center"
           >
             <FileText className="mr-2 h-5 w-5" />
             View Minimum Standards
           </button>
-          <button className="w-full border border-navy-blue text-navy-blue py-2 px-4 rounded mb-3 flex items-center justify-center">
+          <button 
+            onClick={() => handleNavigation('search')}
+            className="w-full border border-navy-blue text-navy-blue py-2 px-4 rounded mb-3 flex items-center justify-center"
+          >
             <Search className="mr-2 h-5 w-5" />
             Search Regulations
           </button>
@@ -86,7 +143,12 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo }) => {
       <div className="bg-white p-6 rounded-lg shadow-md">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-navy-blue">Recent AI Queries</h2>
-          <button className="text-navy-blue hover:underline text-sm">View All</button>
+          <button 
+            onClick={() => handleNavigation('allQueries')}
+            className="text-navy-blue hover:underline text-sm"
+          >
+            View All
+          </button>
         </div>
         
         <div className="overflow-x-auto">
@@ -108,23 +170,36 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo }) => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {queryLogs.map((log) => (
-                <tr key={log.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {log.query}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 flex items-center">
-                    <Clock className="h-4 w-4 mr-1" />
-                    {log.timestamp}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {log.document}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-navy-blue">
-                    <button className="hover:underline">View</button>
+              {queryLogs.length > 0 ? (
+                queryLogs.map((log) => (
+                  <tr key={log.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {log.query}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 flex items-center">
+                      <Clock className="h-4 w-4 mr-1" />
+                      {log.timestamp}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {log.document}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-navy-blue">
+                      <button 
+                        onClick={() => handleNavigation(`query/${log.id}`)}
+                        className="hover:underline"
+                      >
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500">
+                    No recent queries found.
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>

@@ -7,12 +7,10 @@ interface AIModelSelectorProps {
 }
 
 const AIModelSelector: React.FC<AIModelSelectorProps> = ({ selectedModel, onModelChange }) => {
+  // Only keeping local-model and gpt-4o-mini as requested
   const models = [
-    { id: 'qwen-local', name: 'Qwen 2.5 (Local)', description: 'Cross-platform local model for compliance questions' },
-    { id: 'gpt-4o', name: 'GPT-4o', description: 'Most capable model, best for complex compliance questions' },
-    { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', description: 'Fast responses for general compliance questions' },
-    { id: 'claude-3-opus', name: 'Claude 3 Opus', description: 'Excellent for detailed regulatory analysis' },
-    { id: 'demo', name: 'Demo Mode', description: 'Pre-programmed responses (no API key required)' }
+    { id: 'local-model', name: 'Local LLM', description: 'Use a locally hosted LLM for compliance questions' },
+    { id: 'gpt-4o-mini', name: 'GPT-4o Mini', description: 'Efficient model for compliance questions' }
   ];
 
   return (
@@ -40,7 +38,7 @@ const AIModelSelector: React.FC<AIModelSelectorProps> = ({ selectedModel, onMode
         ))}
       </div>
       <div className="mt-3 text-xs text-gray-500">
-        Note: 'Qwen 2.5 (Local)' runs on the server. Other models require an API key.
+        Note: 'Local LLM' requires a locally hosted model. 'GPT-4o Mini' requires an OpenAI API key.
       </div>
     </div>
   );

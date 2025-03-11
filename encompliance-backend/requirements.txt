@@ -5,4 +5,14 @@ pydantic-settings==2.8.1
 python-dotenv==1.0.0
 httpx==0.25.1
 python-multipart==0.0.6
-email-validator==2.0.0 
+email-validator==2.0.0
+# Database
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+alembic==1.12.1
+asyncpg==0.28.0  # For async database support
+# Authentication
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+# For JWT token
+python-multipart==0.0.6 

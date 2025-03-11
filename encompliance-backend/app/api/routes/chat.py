@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict
 from app.services.llm_service import get_llm_response
 from app.core.config import get_settings
 
@@ -13,7 +13,7 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     prompt: str
     operation_type: str
-    message_history: Optional[List[ChatMessage]] = []
+    message_history: Optional[List[Dict[str, str]]] = []
     model: Optional[str] = None
     pdf_ids: Optional[List[int]] = None
 
@@ -27,10 +27,13 @@ async def chat(request: ChatRequest):
     Process a chat request and return a response from the LLM.
     """
     try:
+        # Convert message_history to the expected format if needed
+        message_history = request.message_history or []
+        
         response = await get_llm_response(
             prompt=request.prompt,
             operation_type=request.operation_type,
-            message_history=request.message_history,
+            message_history=message_history,
             pdf_ids=request.pdf_ids,
             model=request.model
         )

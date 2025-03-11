@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Loader2 } from 'lucide-react';
-import { getAIResponse, getFallbackResponse } from '../services/aiService';
+import { getAIResponse } from '../services/aiService';
+import ErrorMessage from '../components/ErrorMessage';
 
 interface Message {
   id: number;
@@ -18,7 +19,7 @@ interface AIChatProps {
 
 const AIChat: React.FC<AIChatProps> = ({ 
   operationType, 
-  selectedModel = 'demo',
+  selectedModel = 'local-model',
   activePdfIds = []
 }) => {
   const [messages, setMessages] = useState<Message[]>([
@@ -28,7 +29,7 @@ const AIChat: React.FC<AIChatProps> = ({
         operationType === 'daycare' 
           ? 'Licensed and Registered Child-Care Homes' 
           : 'General Residential Operations'
-      } compliance. How can I assist you today?${selectedModel === 'qwen-local' ? ' (Using local Qwen 2.5 model)' : ''}`,
+      } compliance. How can I assist you today?`,
       sender: 'ai',
       timestamp: new Date()
     }
@@ -36,6 +37,7 @@ const AIChat: React.FC<AIChatProps> = ({
   
   const [inputValue, setInputValue] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const scrollToBottom = () => {
@@ -48,6 +50,9 @@ const AIChat: React.FC<AIChatProps> = ({
   
   const handleSendMessage = async () => {
     if (inputValue.trim() === '' || isProcessing) return;
+    
+    // Clear any previous errors
+    setError(null);
     
     // Add user message
     const userMessage: Message = {
@@ -70,13 +75,15 @@ const AIChat: React.FC<AIChatProps> = ({
     setInputValue('');
     setIsProcessing(true);
     
-    // Convert messages to the format expected by the API
+    // Convert messages to the format expected by the API (plain objects, not class instances)
     const messageHistory = messages
       .filter(msg => !msg.isLoading) // Filter out any loading messages
       .map(msg => ({
         role: msg.sender === 'user' ? 'user' : 'assistant',
         content: msg.text
       }));
+    
+    console.log('Sending message history:', JSON.stringify(messageHistory));
     
     try {
       // Get AI response
@@ -100,6 +107,11 @@ const AIChat: React.FC<AIChatProps> = ({
             : msg
         )
       );
+      
+      // Handle any error returned from the API
+      if (response.error) {
+        setError(`Error: ${response.error}`);
+      }
     } catch (error) {
       console.error('Error getting AI response:', error);
       
@@ -115,6 +127,9 @@ const AIChat: React.FC<AIChatProps> = ({
             : msg
         )
       );
+      
+      // Set error message for the user
+      setError('Failed to connect to the AI service. Please check your connection and try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -133,6 +148,16 @@ const AIChat: React.FC<AIChatProps> = ({
   
   return (
     <div className="flex flex-col h-full">
+      {error && (
+        <div className="px-4 pt-3">
+          <ErrorMessage 
+            message={error}
+            type="error"
+            onClose={() => setError(null)}
+          />
+        </div>
+      )}
+      
       <div className="flex-grow overflow-auto p-4">
         {messages.map((message) => (
           <div 
@@ -190,7 +215,7 @@ const AIChat: React.FC<AIChatProps> = ({
           </button>
         </div>
         <div className="mt-2 text-xs text-gray-500 text-right">
-          {import.meta.env.VITE_OPENAI_API_KEY ? 'Powered by GPT-4' : 'Demo Mode - Limited Responses'}
+          Using: {selectedModel === 'local-model' ? 'Local LLM' : 'GPT-4o Mini'}
         </div>
       </div>
     </div>

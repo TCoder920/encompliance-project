@@ -1,21 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import ErrorMessage from '../components/ErrorMessage';
 
 interface LoginPageProps {
   navigateTo: (page: string) => void;
 }
 
 const LoginPage: React.FC<LoginPageProps> = ({ navigateTo }) => {
-  const { login } = useAuth();
+  const { login, error: authError, clearError } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
+  
+  // Clear errors when component unmounts
+  useEffect(() => {
+    return () => {
+      clearError();
+    };
+  }, [clearError]);
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -23,6 +30,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ navigateTo }) => {
       ...formData,
       [name]: value
     });
+    
+    // Clear errors when user starts typing
+    if (localError) setLocalError(null);
+    if (authError) clearError();
   };
   
   const handleLogin = async (e: React.FormEvent) => {
@@ -30,15 +41,16 @@ const LoginPage: React.FC<LoginPageProps> = ({ navigateTo }) => {
     
     try {
       setIsSubmitting(true);
-      setError(null);
+      setLocalError(null);
       
       await login(formData.email, formData.password);
       
       // Redirect to dashboard on successful login
       navigateTo('dashboard');
     } catch (err) {
+      // If there's an error, we don't need to set local error
+      // because the AuthContext will handle it
       console.error('Login error:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred during login');
     } finally {
       setIsSubmitting(false);
     }
@@ -57,10 +69,20 @@ const LoginPage: React.FC<LoginPageProps> = ({ navigateTo }) => {
       <div className="bg-white rounded-lg shadow-lg p-8">
         <h1 className="text-3xl font-bold text-navy-blue mb-6 text-center font-times">Login to Your Account</h1>
         
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded">
-            {error}
-          </div>
+        {localError && (
+          <ErrorMessage 
+            message={localError}
+            type="error"
+            onClose={() => setLocalError(null)}
+          />
+        )}
+        
+        {authError && (
+          <ErrorMessage 
+            message={authError}
+            type="error"
+            onClose={clearError}
+          />
         )}
         
         <form onSubmit={handleLogin} className="space-y-4">

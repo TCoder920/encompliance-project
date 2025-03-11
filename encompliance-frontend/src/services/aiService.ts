@@ -1,7 +1,7 @@
 import api from './api';
 
 export interface ChatMessage {
-  role: 'user' | 'assistant';
+  role: string;
   content: string;
 }
 
@@ -14,11 +14,13 @@ export async function getAIResponse(
   prompt: string, 
   operationType: string,
   messageHistory: ChatMessage[] = [],
-  selectedModel: string = 'demo',
+  selectedModel: string = 'local-model',
   pdfIds?: number[]
 ): Promise<AIResponse> {
   try {
-    // Call our backend API for all model types
+    console.log(`Sending chat request to backend with model: ${selectedModel}`);
+    
+    // Call our backend API
     const response = await api.post('/chat', {
       prompt,
       operation_type: operationType,
@@ -27,12 +29,32 @@ export async function getAIResponse(
       pdf_ids: pdfIds
     });
     
+    console.log('Backend response received:', response.data);
+    
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error calling AI service:', error);
     
-    // Fallback response if API call fails
-    return getFallbackResponse(prompt, operationType);
+    let errorMessage = 'Failed to connect to the AI service';
+    
+    // Extract more detailed error information if available
+    if (error.response) {
+      // The request was made and the server responded with an error status
+      console.error('Response error:', error.response.data);
+      errorMessage = error.response.data?.error || `Server error: ${error.response.status}`;
+    } else if (error.request) {
+      // The request was made but no response was received
+      console.error('Request error:', error.request);
+      errorMessage = 'No response from server. Please check your connection.';
+    } else {
+      // Something happened in setting up the request
+      errorMessage = error.message || 'Unknown error occurred';
+    }
+    
+    return {
+      text: "I apologize, but I encountered an error processing your request. Please try again later.",
+      error: errorMessage
+    };
   }
 }
 
