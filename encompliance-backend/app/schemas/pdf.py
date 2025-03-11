@@ -1,63 +1,45 @@
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel
 
 
-# Shared properties
-class PDFBase(BaseModel):
+class PdfBase(BaseModel):
     title: str
     description: Optional[str] = None
-    category: Optional[str] = None
-    is_public: Optional[bool] = False
+    filename: str
+    state: str
+    category: str
+    operation_type: Optional[str] = None
+    document_type: str
 
 
-# Properties to receive via API on creation
-class PDFCreate(PDFBase):
+class PdfCreate(PdfBase):
     pass
 
 
-# Properties to receive via API on update
-class PDFUpdate(BaseModel):
+class PdfUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
+    state: Optional[str] = None
     category: Optional[str] = None
-    is_public: Optional[bool] = None
-    is_processed: Optional[bool] = None
+    operation_type: Optional[str] = None
+    document_type: Optional[str] = None
 
 
-# Properties shared by models stored in DB
-class PDFInDBBase(PDFBase):
+class Pdf(PdfBase):
     id: int
-    filename: str
-    file_path: str
-    file_size: int
-    file_type: str
-    is_processed: bool
-    owner_id: int
     created_at: datetime
     updated_at: datetime
-
+    file_path: str
+    
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
-# Properties to return via API
-class PDF(PDFInDBBase):
-    pass
-
-
-# Properties stored in DB
-class PDFInDB(PDFInDBBase):
-    pass
-
-
-# Properties for file upload response
-class PDFUploadResponse(BaseModel):
-    id: int
-    title: str
-    filename: str
-    file_size: int
-    file_type: str
-    upload_success: bool
-    message: str
+class PdfSearchParams(BaseModel):
+    state: Optional[str] = None
+    category: Optional[str] = None
+    operation_type: Optional[str] = None
+    document_type: Optional[str] = None
+    query: Optional[str] = None 

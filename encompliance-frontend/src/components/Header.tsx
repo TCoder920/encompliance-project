@@ -1,5 +1,6 @@
 import React from 'react';
-import { Shield, Home } from 'lucide-react';
+import { Shield, Home, LogIn } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 interface HeaderProps {
   navigateTo: (page: string) => void;
@@ -7,6 +8,8 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ navigateTo, currentPage }) => {
+  const { isAuthenticated, logout } = useAuth();
+  
   return (
     <header className="bg-navy-blue text-white shadow-md">
       <div className="container mx-auto px-4 py-3">
@@ -25,12 +28,41 @@ const Header: React.FC<HeaderProps> = ({ navigateTo, currentPage }) => {
               <span>Home</span>
             </button>
             
-            <button 
-              onClick={() => navigateTo('signup')}
-              className="bg-white text-navy-blue px-4 py-2 rounded font-bold hover:bg-blue-100 transition duration-200"
-            >
-              Sign Up
-            </button>
+            {isAuthenticated ? (
+              <>
+                <button 
+                  onClick={() => navigateTo('dashboard')}
+                  className={`flex items-center space-x-1 ${currentPage === 'dashboard' ? 'text-blue-300' : 'hover:text-blue-300'}`}
+                >
+                  <span>Dashboard</span>
+                </button>
+                <button 
+                  onClick={() => {
+                    logout();
+                    navigateTo('home');
+                  }}
+                  className="bg-white text-navy-blue px-4 py-2 rounded font-bold hover:bg-blue-100 transition duration-200"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <button 
+                  onClick={() => navigateTo('login')}
+                  className="flex items-center space-x-1 text-white hover:text-blue-300"
+                >
+                  <LogIn className="h-5 w-5" />
+                  <span>Login</span>
+                </button>
+                <button 
+                  onClick={() => navigateTo('signup')}
+                  className="bg-white text-navy-blue px-4 py-2 rounded font-bold hover:bg-blue-100 transition duration-200"
+                >
+                  Sign Up
+                </button>
+              </>
+            )}
           </nav>
           
           <div className="md:hidden">

@@ -8,6 +8,7 @@ interface AIModelSelectorProps {
 
 const AIModelSelector: React.FC<AIModelSelectorProps> = ({ selectedModel, onModelChange }) => {
   const models = [
+    { id: 'qwen-local', name: 'Qwen 2.5 (Local)', description: 'Cross-platform local model for compliance questions' },
     { id: 'gpt-4o', name: 'GPT-4o', description: 'Most capable model, best for complex compliance questions' },
     { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', description: 'Fast responses for general compliance questions' },
     { id: 'claude-3-opus', name: 'Claude 3 Opus', description: 'Excellent for detailed regulatory analysis' },
@@ -39,7 +40,7 @@ const AIModelSelector: React.FC<AIModelSelectorProps> = ({ selectedModel, onMode
         ))}
       </div>
       <div className="mt-3 text-xs text-gray-500">
-        Note: Using real AI models requires an API key
+        Note: 'Qwen 2.5 (Local)' runs on the server. Other models require an API key.
       </div>
     </div>
   );

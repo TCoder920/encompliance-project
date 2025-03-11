@@ -16,8 +16,9 @@ const DocumentViewerPage: React.FC<DocumentViewerPageProps> = ({ operationType, 
   const [isChatOpen, setIsChatOpen] = useState(true); // Set to true by default
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [selectedAIModel, setSelectedAIModel] = useState('gpt-4o');
+  const [selectedAIModel, setSelectedAIModel] = useState('qwen-local');
   const [showAISettings, setShowAISettings] = useState(false);
+  const [activePdfIds, setActivePdfIds] = useState<number[]>([]);
   
   const totalPages = 150; // Placeholder value
   
@@ -470,31 +471,42 @@ const DocumentViewerPage: React.FC<DocumentViewerPageProps> = ({ operationType, 
         
         {/* AI Chat panel - Always visible by default */}
         {isChatOpen && (
-          <div className="w-full md:w-1/3 border-l border-gray-300 flex flex-col bg-white">
-            <div className="p-3 bg-navy-blue text-white flex justify-between items-center">
-              <div className="flex items-center">
-                <h3 className="font-bold">AI Compliance Assistant</h3>
+          <div className="fixed right-0 top-16 bottom-0 w-96 flex flex-col border-l border-gray-200 bg-white z-10">
+            {/* AI Settings Toggle */}
+            <div className="flex justify-between items-center p-3 border-b border-gray-200">
+              <h3 className="font-bold text-navy-blue">AI Assistant</h3>
+              <div className="flex items-center space-x-2">
                 <button 
                   onClick={toggleAISettings}
-                  className="ml-2 text-white hover:text-gray-200"
-                  title="AI Settings"
+                  className="p-1 rounded-full hover:bg-gray-100"
+                  aria-label="AI Settings"
                 >
-                  <Settings className="h-4 w-4" />
+                  <Settings size={16} />
+                </button>
+                <button 
+                  onClick={toggleChat}
+                  className="p-1 rounded-full hover:bg-gray-100"
+                  aria-label="Close chat"
+                >
+                  <X size={16} />
                 </button>
               </div>
-              <button onClick={toggleChat} className="text-white hover:text-gray-200">
-                <X className="h-5 w-5" />
-              </button>
             </div>
             
+            {/* AI Settings Pane (conditionally shown) */}
             {showAISettings && (
-              <AIModelSelector 
+              <AIModelSelector
                 selectedModel={selectedAIModel}
                 onModelChange={setSelectedAIModel}
               />
             )}
             
-            <AIChat operationType={operationType} />
+            {/* Chat Interface */}
+            <AIChat 
+              operationType={operationType} 
+              selectedModel={selectedAIModel}
+              activePdfIds={activePdfIds}
+            />
           </div>
         )}
       </div>

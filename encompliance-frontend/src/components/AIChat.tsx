@@ -12,9 +12,15 @@ interface Message {
 
 interface AIChatProps {
   operationType: string;
+  selectedModel?: string;
+  activePdfIds?: number[];
 }
 
-const AIChat: React.FC<AIChatProps> = ({ operationType }) => {
+const AIChat: React.FC<AIChatProps> = ({ 
+  operationType, 
+  selectedModel = 'demo',
+  activePdfIds = []
+}) => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
@@ -22,7 +28,7 @@ const AIChat: React.FC<AIChatProps> = ({ operationType }) => {
         operationType === 'daycare' 
           ? 'Licensed and Registered Child-Care Homes' 
           : 'General Residential Operations'
-      } compliance. How can I assist you today?`,
+      } compliance. How can I assist you today?${selectedModel === 'qwen-local' ? ' (Using local Qwen 2.5 model)' : ''}`,
       sender: 'ai',
       timestamp: new Date()
     }
@@ -51,60 +57,61 @@ const AIChat: React.FC<AIChatProps> = ({ operationType }) => {
       timestamp: new Date()
     };
     
-    // Add placeholder for AI response
-    const aiPlaceholder: Message = {
+    // Add temporary AI message with loading state
+    const loadingMessage: Message = {
       id: messages.length + 2,
-      text: '',
+      text: '...',
       sender: 'ai',
       timestamp: new Date(),
       isLoading: true
     };
     
-    setMessages([...messages, userMessage, aiPlaceholder]);
+    setMessages([...messages, userMessage, loadingMessage]);
     setInputValue('');
     setIsProcessing(true);
     
+    // Convert messages to the format expected by the API
+    const messageHistory = messages
+      .filter(msg => !msg.isLoading) // Filter out any loading messages
+      .map(msg => ({
+        role: msg.sender === 'user' ? 'user' : 'assistant',
+        content: msg.text
+      }));
+    
     try {
-      // Prepare message history for context
-      const messageHistory = messages
-        .filter(msg => messages.indexOf(msg) > 0) // Skip the welcome message
-        .map(msg => ({
-          role: msg.sender === 'user' ? 'user' : 'assistant',
-          content: msg.text
-        }));
+      // Get AI response
+      const response = await getAIResponse(
+        inputValue, 
+        operationType, 
+        messageHistory,
+        selectedModel,
+        activePdfIds.length > 0 ? activePdfIds : undefined
+      );
       
-      // Get response from AI service
-      const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-      let response;
-      
-      if (apiKey) {
-        // Use real AI if API key is available
-        response = await getAIResponse(inputValue, operationType, messageHistory as any);
-      } else {
-        // Use fallback responses if no API key
-        response = getFallbackResponse(inputValue, operationType);
-      }
-      
-      // Update the placeholder with the actual response
+      // Replace loading message with actual response
       setMessages(prevMessages => 
         prevMessages.map(msg => 
-          msg.id === aiPlaceholder.id 
-            ? { ...msg, text: response.text, isLoading: false } 
+          msg.id === loadingMessage.id
+            ? {
+                ...msg,
+                text: response.text,
+                isLoading: false
+              }
             : msg
         )
       );
     } catch (error) {
       console.error('Error getting AI response:', error);
       
-      // Update placeholder with error message
+      // Replace loading message with error
       setMessages(prevMessages => 
         prevMessages.map(msg => 
-          msg.id === aiPlaceholder.id 
-            ? { 
-                ...msg, 
-                text: "I'm sorry, I encountered an error processing your request. Please try again later.", 
-                isLoading: false 
-              } 
+          msg.id === loadingMessage.id
+            ? {
+                ...msg,
+                text: 'I apologize, but I encountered an error processing your request. Please try again later.',
+                isLoading: false
+              }
             : msg
         )
       );

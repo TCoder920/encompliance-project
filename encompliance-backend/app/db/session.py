@@ -4,16 +4,22 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
 
-engine = create_engine(str(settings.DATABASE_URL), pool_pre_ping=True)
+# Create SQLAlchemy engine
+engine = create_engine(
+    str(settings.SQLALCHEMY_DATABASE_URI),
+    pool_pre_ping=True
+)
+
+# Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+# Base class for SQLAlchemy models
 Base = declarative_base()
 
-
-# Dependency to get DB session
+# Dependency for getting DB session
 def get_db():
     db = SessionLocal()
     try:
         yield db
     finally:
-        db.close()
+        db.close() 

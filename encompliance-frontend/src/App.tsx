@@ -4,6 +4,7 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
 import SignupPage from './pages/SignupPage';
+import LoginPage from './pages/LoginPage';
 import OperationTypePage from './pages/OperationTypePage';
 import DocumentViewerPage from './pages/DocumentViewerPage';
 import ManualUploadPage from './pages/ManualUploadPage';
@@ -58,6 +59,8 @@ function AppContent() {
     switch (currentPage) {
       case 'home':
         return <HomePage navigateTo={navigateTo} />;
+      case 'login':
+        return <LoginPage navigateTo={navigateTo} />;
       case 'signup':
         return <SignupPage onStateSelect={handleStateSelection} />;
       case 'operationType':

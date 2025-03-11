@@ -13,16 +13,29 @@ export interface AIResponse {
 export async function getAIResponse(
   prompt: string, 
   operationType: string,
-  messageHistory: ChatMessage[] = []
+  messageHistory: ChatMessage[] = [],
+  selectedModel: string = 'demo',
+  pdfIds?: number[]
 ): Promise<AIResponse> {
   try {
-    const response = await api.post('/chat', {
-      prompt,
-      operation_type: operationType,
-      message_history: messageHistory
-    });
-    
-    return response.data;
+    // If using the local Qwen model or demo mode, call our backend API
+    if (selectedModel === 'qwen-local' || selectedModel === 'demo') {
+      const response = await api.post('/chat', {
+        prompt,
+        operation_type: operationType,
+        message_history: messageHistory,
+        pdf_ids: pdfIds
+      });
+      
+      return response.data;
+    } 
+    // For external API-based models, this would call those APIs
+    // This is a placeholder for future implementation
+    else {
+      console.log(`Selected model ${selectedModel} is not implemented yet`);
+      // For now, fall back to the demo response
+      return getFallbackResponse(prompt, operationType);
+    }
   } catch (error) {
     console.error('Error calling AI service:', error);
     

@@ -1,10 +1,11 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
+
+from app.schemas.role import Role
 
 
-# Shared properties
 class UserBase(BaseModel):
     email: EmailStr
     full_name: str
@@ -12,15 +13,14 @@ class UserBase(BaseModel):
     operation_type: Optional[str] = None
     state: Optional[str] = None
     phone_number: Optional[str] = None
-    is_active: Optional[bool] = True
+    is_active: bool = True
 
 
-# Properties to receive via API on creation
 class UserCreate(UserBase):
     password: str
+    role_id: Optional[int] = None
 
 
-# Properties to receive via API on update
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     full_name: Optional[str] = None
@@ -30,25 +30,24 @@ class UserUpdate(BaseModel):
     phone_number: Optional[str] = None
     password: Optional[str] = None
     is_active: Optional[bool] = None
+    role_id: Optional[int] = None
 
 
-# Properties shared by models stored in DB
 class UserInDBBase(UserBase):
     id: int
-    subscription_status: str
-    subscription_end_date: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
+    subscription_status: str = "free"
+    subscription_end_date: Optional[datetime] = None
+    role_id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
-# Properties to return via API
 class User(UserInDBBase):
     pass
 
 
-# Properties stored in DB
 class UserInDB(UserInDBBase):
-    hashed_password: str
+    hashed_password: str 
