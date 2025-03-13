@@ -17,14 +17,22 @@ function AppContent() {
   const [selectedState, setSelectedState] = useState('');
   const [operationType, setOperationType] = useState('');
 
+  // Debug logging for authentication state
+  useEffect(() => {
+    console.log("App - Authentication state changed:", isAuthenticated);
+    console.log("App - Current page:", currentPage);
+  }, [isAuthenticated, currentPage]);
+
   // Redirect to dashboard if authenticated
   useEffect(() => {
     if (isAuthenticated && currentPage === 'home') {
+      console.log("App - Redirecting to dashboard because user is authenticated");
       setCurrentPage('dashboard');
     }
   }, [isAuthenticated, currentPage]);
 
   const navigateTo = (page: string) => {
+    console.log("App - Navigating to:", page);
     setCurrentPage(page);
   };
 

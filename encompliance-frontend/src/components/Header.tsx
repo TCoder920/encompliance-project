@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Shield, Home, LogIn } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -9,6 +9,11 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ navigateTo, currentPage }) => {
   const { isAuthenticated, logout } = useAuth();
+  
+  // Add debug logging for authentication state
+  useEffect(() => {
+    console.log("Header - Authentication state:", isAuthenticated);
+  }, [isAuthenticated]);
   
   return (
     <header className="bg-navy-blue text-white shadow-md">

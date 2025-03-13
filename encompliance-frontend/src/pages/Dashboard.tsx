@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Clock, Search, FileText } from 'lucide-react';
 import ErrorMessage from '../components/ErrorMessage';
 import { useAuth } from '../contexts/AuthContext';
+import PDFViewer from '../components/PDFViewer';
+import { PDF } from '../services/pdfService';
 
 interface DashboardProps {
   navigateTo: (page: string) => void;
@@ -45,6 +47,13 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo }) => {
       document: "Chapter 746"
     }
   ];
+  
+  const handlePDFSelect = (pdf: PDF) => {
+    // You can implement PDF viewing functionality here
+    console.log('Selected PDF:', pdf);
+    // For example, you could navigate to a PDF viewer page with the PDF ID
+    // navigateTo(`pdfViewer/${pdf.id}`);
+  };
   
   useEffect(() => {
     // Simulate loading data
@@ -140,68 +149,74 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo }) => {
         </div>
       </div>
       
-      <div className="bg-white p-6 rounded-lg shadow-md">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-navy-blue">Recent AI Queries</h2>
-          <button 
-            onClick={() => handleNavigation('allQueries')}
-            className="text-navy-blue hover:underline text-sm"
-          >
-            View All
-          </button>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Query
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Time
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Document
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {queryLogs.length > 0 ? (
-                queryLogs.map((log) => (
-                  <tr key={log.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {log.query}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 flex items-center">
-                      <Clock className="h-4 w-4 mr-1" />
-                      {log.timestamp}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {log.document}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-navy-blue">
-                      <button 
-                        onClick={() => handleNavigation(`query/${log.id}`)}
-                        className="hover:underline"
-                      >
-                        View
-                      </button>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-navy-blue">Recent AI Queries</h2>
+            <button 
+              onClick={() => handleNavigation('allQueries')}
+              className="text-navy-blue hover:underline text-sm"
+            >
+              View All
+            </button>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Query
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Time
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Document
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {queryLogs.length > 0 ? (
+                  queryLogs.slice(0, 3).map((log) => (
+                    <tr key={log.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {log.query}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 flex items-center">
+                        <Clock className="h-4 w-4 mr-1" />
+                        {log.timestamp}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {log.document}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-navy-blue">
+                        <button 
+                          onClick={() => handleNavigation(`query/${log.id}`)}
+                          className="hover:underline"
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500">
+                      No recent queries found.
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500">
-                    No recent queries found.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <div>
+          <PDFViewer onPDFSelect={handlePDFSelect} />
         </div>
       </div>
     </div>

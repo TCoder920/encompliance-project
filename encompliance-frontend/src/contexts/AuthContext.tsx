@@ -75,22 +75,55 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
   };
 
   const login = async (email: string, password: string) => {
+    setLoading(true);
+    setError(null);
+    
     try {
-      setError(null);
+      console.log("Attempting login with:", { email });
       const response = await authService.login({ email, password });
-      authService.setToken(response.access_token);
-      setIsAuthenticated(true);
       
-      try {
-        const userData = await userService.getCurrentUser();
-        setUser(userData);
-      } catch (profileErr) {
-        handleError(profileErr, 'Your login was successful, but we could not load your profile data.');
-        // Still consider the user logged in
+      if (response && response.access_token) {
+        console.log("Received token, setting in localStorage");
+        authService.setToken(response.access_token);
+        
+        // Set authenticated immediately to improve perceived performance
+        setIsAuthenticated(true);
+        
+        // Get user data
+        try {
+          console.log("Attempting to fetch user data");
+          const userData = await userService.getCurrentUser();
+          setUser(userData);
+          console.log("User data loaded successfully:", userData);
+        } catch (userErr) {
+          console.error('Error fetching user data:', userErr);
+          // We're still authenticated even if user data fetch fails
+          // Do not change isAuthenticated state
+          
+          // Create minimal user data
+          setUser({
+            id: 0,
+            email: email,
+            full_name: '',
+            operation_name: '',
+            subscription_status: 'active',
+            is_active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+          
+          console.log("Authentication successful, using minimal user data");
+        }
+      } else {
+        setError('Login failed. Please check your credentials and try again.');
+        setIsAuthenticated(false);
       }
     } catch (err) {
+      console.error("Login error:", err);
       handleError(err, 'Login failed. Please check your credentials and try again.');
-      throw err; // Re-throw to allow component to handle it
+      setIsAuthenticated(false);
+    } finally {
+      setLoading(false);
     }
   };
 
