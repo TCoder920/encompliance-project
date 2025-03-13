@@ -9,6 +9,7 @@ import OperationTypePage from './pages/OperationTypePage';
 import DocumentViewerPage from './pages/DocumentViewerPage';
 import ManualUploadPage from './pages/ManualUploadPage';
 import Dashboard from './pages/Dashboard';
+import SearchRegulationsPage from './pages/SearchRegulationsPage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 function AppContent() {
@@ -86,6 +87,8 @@ function AppContent() {
         return <DocumentViewerPage operationType={operationType} navigateTo={navigateTo} />;
       case 'dashboard':
         return <Dashboard navigateTo={navigateTo} />;
+      case 'search':
+        return <SearchRegulationsPage navigateTo={navigateTo} />;
       default:
         return <HomePage navigateTo={navigateTo} />;
     }

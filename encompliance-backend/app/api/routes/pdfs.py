@@ -1,28 +1,46 @@
 import os
 import shutil
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from typing import List
 from datetime import datetime
-
 from app.database import get_db
 from app.models.pdf import PDF
-from app.schemas.pdf import PDFResponse, PDFList
+from app.services.pdf_service import list_pdfs, get_pdf
 from app.auth.dependencies import get_current_user
-from app.models.user import User
+from app.core.config import get_settings
 
-router = APIRouter()
+router = APIRouter(tags=["pdfs"])
+settings = get_settings()
 
-DOCUMENTS_DIR = "../../encompliance-documents"
-# Ensure the documents directory exists
-os.makedirs(DOCUMENTS_DIR, exist_ok=True)
+# Add OPTIONS handler for CORS preflight requests
+@router.options("/pdfs/list")
+@router.options("/pdfs/upload")
+@router.options("/pdfs/download/{pdf_id}")
+@router.options("/pdfs/delete/{pdf_id}")
+async def options_pdfs():
+    """
+    Handle OPTIONS requests for PDF endpoints.
+    """
+    headers = {
+        "Access-Control-Allow-Origin": "http://localhost:5173",
+        "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Authorization, Content-Type, x-token",
+        "Access-Control-Max-Age": "600",
+        "Access-Control-Allow-Credentials": "true",
+    }
+    return JSONResponse(content={}, headers=headers)
 
-@router.post("/upload", response_model=PDFResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/pdfs/upload", status_code=status.HTTP_201_CREATED)
 async def upload_pdf(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user = Depends(get_current_user)
 ):
+    """
+    Upload a PDF file.
+    """
     # Validate file type
     if not file.filename.lower().endswith('.pdf'):
         raise HTTPException(
@@ -30,83 +48,136 @@ async def upload_pdf(
             detail="Only PDF files are allowed"
         )
     
-    # Save file to the documents directory
-    file_path = os.path.join(DOCUMENTS_DIR, file.filename)
-    
     try:
+        # Create storage directory if it doesn't exist
+        os.makedirs(settings.PDF_STORAGE_PATH, exist_ok=True)
+        
+        # Generate a unique filename
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        unique_filename = f"{timestamp}_{file.filename}"
+        file_path = os.path.join(settings.PDF_STORAGE_PATH, unique_filename)
+        
+        # Save the file
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
+        
+        # Create PDF record in database
+        pdf = PDF(
+            filename=file.filename,
+            filepath=unique_filename,
+            uploaded_by=current_user.id
+        )
+        db.add(pdf)
+        db.commit()
+        db.refresh(pdf)
+        
+        return {
+            "id": pdf.id,
+            "filename": pdf.filename,
+            "filepath": unique_filename,
+            "uploaded_at": pdf.uploaded_at,
+            "uploaded_by": pdf.uploaded_by
+        }
     except Exception as e:
+        # Log the error
+        print(f"Error uploading PDF: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to save file: {str(e)}"
+            detail=f"Failed to upload PDF: {str(e)}"
         )
-    
-    # Create PDF record in database
-    db_pdf = PDF(
-        filename=file.filename,
-        filepath=file_path,
-        uploaded_by=current_user.id
-    )
-    
-    db.add(db_pdf)
-    db.commit()
-    db.refresh(db_pdf)
-    
-    return db_pdf
 
-@router.get("/list", response_model=PDFList)
-async def list_pdfs(
+@router.get("/pdfs/list")
+async def get_pdfs(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user = Depends(get_current_user)
 ):
-    # Get all non-deleted PDFs
-    pdfs = db.query(PDF).filter(PDF.is_deleted == False).all()
-    
-    # Ensure chapter-746-centers.pdf is first
-    sorted_pdfs = sorted(
-        pdfs,
-        key=lambda pdf: 0 if pdf.filename == "chapter-746-centers.pdf" else 1
-    )
-    
-    return {"pdfs": sorted_pdfs}
+    """
+    List all PDFs.
+    """
+    try:
+        pdfs = await list_pdfs(db)
+        return {"pdfs": pdfs}
+    except Exception as e:
+        # Log the error
+        print(f"Error listing PDFs: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to list PDFs: {str(e)}"
+        )
 
-@router.get("/download/{pdf_id}", response_model=PDFResponse)
+@router.get("/pdfs/download/{pdf_id}")
 async def download_pdf(
     pdf_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user = Depends(get_current_user)
 ):
-    pdf = db.query(PDF).filter(PDF.id == pdf_id, PDF.is_deleted == False).first()
-    
-    if not pdf:
+    """
+    Get a PDF by ID.
+    """
+    try:
+        pdf = await get_pdf(pdf_id, db)
+        
+        if not pdf:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"PDF with ID {pdf_id} not found"
+            )
+        
+        # Return the PDF data
+        return pdf
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Log the error
+        print(f"Error downloading PDF: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="PDF not found"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to download PDF: {str(e)}"
         )
-    
-    return pdf
 
-@router.delete("/delete/{pdf_id}", response_model=PDFResponse)
+@router.delete("/pdfs/delete/{pdf_id}")
 async def delete_pdf(
     pdf_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user = Depends(get_current_user)
 ):
-    pdf = db.query(PDF).filter(PDF.id == pdf_id, PDF.is_deleted == False).first()
-    
-    if not pdf:
+    """
+    Delete a PDF by ID.
+    """
+    try:
+        # Get the PDF
+        pdf = db.query(PDF).filter(PDF.id == pdf_id, PDF.is_deleted == False).first()
+        
+        if not pdf:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"PDF with ID {pdf_id} not found"
+            )
+        
+        # Mark the PDF as deleted
+        pdf.is_deleted = True
+        pdf.deleted_at = datetime.now()
+        pdf.deleted_by = current_user.id
+        
+        db.commit()
+        db.refresh(pdf)
+        
+        return {
+            "id": pdf.id,
+            "filename": pdf.filename,
+            "filepath": pdf.filepath,
+            "uploaded_at": pdf.uploaded_at,
+            "uploaded_by": pdf.uploaded_by,
+            "is_deleted": pdf.is_deleted,
+            "deleted_at": pdf.deleted_at,
+            "deleted_by": pdf.deleted_by
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Log the error
+        print(f"Error deleting PDF: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="PDF not found"
-        )
-    
-    # Mark as deleted in database
-    pdf.is_deleted = True
-    pdf.deleted_at = datetime.now()
-    pdf.deleted_by = current_user.id
-    
-    db.commit()
-    db.refresh(pdf)
-    
-    return pdf 
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete PDF: {str(e)}"
+        ) 

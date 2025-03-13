@@ -4,49 +4,25 @@ import ErrorMessage from '../components/ErrorMessage';
 import { useAuth } from '../contexts/AuthContext';
 import PDFViewer from '../components/PDFViewer';
 import { PDF } from '../services/pdfService';
+import api from '../services/api';
 
 interface DashboardProps {
   navigateTo: (page: string) => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ navigateTo }) => {
-  const { error: authError, clearError } = useAuth();
+  const { error: authError, clearError, user } = useAuth();
   const [localError, setLocalError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
-  // Mock data for query logs
-  const queryLogs = [
-    {
-      id: 1,
-      query: "What's the required ratio for 2-year-olds?",
-      timestamp: "Today, 10:23 AM",
-      document: "Chapter 746"
-    },
-    {
-      id: 2,
-      query: "How many hours of annual training are required?",
-      timestamp: "Today, 9:45 AM",
-      document: "Chapter 746"
-    },
-    {
-      id: 3,
-      query: "What are the background check requirements?",
-      timestamp: "Yesterday, 3:12 PM",
-      document: "Chapter 746"
-    },
-    {
-      id: 4,
-      query: "Do I need a food handler's permit?",
-      timestamp: "Yesterday, 1:30 PM",
-      document: "Chapter 746"
-    },
-    {
-      id: 5,
-      query: "What are the requirements for outdoor play equipment?",
-      timestamp: "May 15, 2:45 PM",
-      document: "Chapter 746"
-    }
-  ];
+  const [queryLogs, setQueryLogs] = useState<any[]>([]);
+  const [accountDetails, setAccountDetails] = useState({
+    operationType: '',
+    state: '',
+    status: '',
+    lastLogin: ''
+  });
+  const [selectedQuery, setSelectedQuery] = useState<any | null>(null);
+  const [showQuerySummary, setShowQuerySummary] = useState(false);
   
   const handlePDFSelect = (pdf: PDF) => {
     // You can implement PDF viewing functionality here
@@ -59,16 +35,44 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo }) => {
     // Simulate loading data
     setIsLoading(true);
     
-    // In a real application, this would be a fetch request to get dashboard data
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
+    // Fetch actual query logs from the backend
+    const fetchQueryLogs = async () => {
+      try {
+        // Use the API service with the correct base URL
+        const response = await api.get('/query-logs');
+        setQueryLogs(response.data.logs || []);
+      } catch (err) {
+        console.error('Error fetching query logs:', err);
+        // Don't set error on failed fetch - just show empty state
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    // Fetch user account details
+    const fetchAccountDetails = async () => {
+      try {
+        if (user) {
+          // Use user data from context or fetch additional details if needed
+          setAccountDetails({
+            operationType: user.operation_type || 'Not specified',
+            state: user.state || 'Not specified',
+            status: user.is_active ? 'Active' : 'Inactive',
+            lastLogin: 'Last login data unavailable' // Simplified to avoid TypeScript errors
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching account details:', err);
+      }
+    };
+    
+    fetchQueryLogs();
+    fetchAccountDetails();
     
     return () => {
-      clearTimeout(timer);
       if (authError) clearError();
     };
-  }, [authError, clearError]);
+  }, [authError, clearError, user]);
   
   const handleNavigation = (page: string) => {
     try {
@@ -77,6 +81,23 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo }) => {
       console.error('Navigation error:', err);
       setLocalError('Unable to navigate to the requested page. Please try again.');
     }
+  };
+  
+  const handleViewQuery = async (queryId: number) => {
+    try {
+      // Use the API service with the correct base URL
+      const response = await api.get(`/query/${queryId}`);
+      setSelectedQuery(response.data);
+      setShowQuerySummary(true);
+    } catch (err) {
+      console.error('Error fetching query details:', err);
+      setLocalError('Failed to load query details. Please try again.');
+    }
+  };
+  
+  const handleCloseQuerySummary = () => {
+    setShowQuerySummary(false);
+    setSelectedQuery(null);
   };
   
   if (isLoading) {
@@ -131,94 +152,131 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="border border-gray-200 rounded p-4">
               <h3 className="font-bold text-gray-700 mb-2">Operation Type</h3>
-              <p>Child-Care Center (Chapter 746)</p>
+              <p>{accountDetails.operationType}</p>
             </div>
             <div className="border border-gray-200 rounded p-4">
               <h3 className="font-bold text-gray-700 mb-2">State</h3>
-              <p>Texas</p>
+              <p>{accountDetails.state}</p>
             </div>
             <div className="border border-gray-200 rounded p-4">
               <h3 className="font-bold text-gray-700 mb-2">Account Status</h3>
-              <p className="text-green-600">Active</p>
+              <p className={accountDetails.status === 'Active' ? 'text-green-600' : 'text-red-600'}>
+                {accountDetails.status}
+              </p>
             </div>
             <div className="border border-gray-200 rounded p-4">
               <h3 className="font-bold text-gray-700 mb-2">Last Login</h3>
-              <p>Today, 10:15 AM</p>
+              <p>{accountDetails.lastLogin}</p>
             </div>
           </div>
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-lg shadow-md">
+      {showQuerySummary && selectedQuery ? (
+        <div className="bg-white p-6 rounded-lg shadow-md mb-8">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-navy-blue">Recent AI Queries</h2>
+            <h2 className="text-xl font-bold text-navy-blue">Conversation Summary</h2>
             <button 
-              onClick={() => handleNavigation('allQueries')}
-              className="text-navy-blue hover:underline text-sm"
+              onClick={handleCloseQuerySummary}
+              className="text-gray-500 hover:text-gray-700"
             >
-              View All
+              Close
             </button>
           </div>
           
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Query
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Time
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Document
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {queryLogs.length > 0 ? (
-                  queryLogs.slice(0, 3).map((log) => (
-                    <tr key={log.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {log.query}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 flex items-center">
-                        <Clock className="h-4 w-4 mr-1" />
-                        {log.timestamp}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {log.document}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-navy-blue">
-                        <button 
-                          onClick={() => handleNavigation(`query/${log.id}`)}
-                          className="hover:underline"
-                        >
-                          View
-                        </button>
+          <div className="border-b border-gray-200 pb-4 mb-4">
+            <p className="text-sm text-gray-500">
+              {new Date(selectedQuery.timestamp).toLocaleString()}
+            </p>
+            <p className="font-medium mt-1">{selectedQuery.query}</p>
+          </div>
+          
+          <div className="bg-gray-50 p-4 rounded">
+            <h3 className="font-medium mb-2">AI Response:</h3>
+            <p className="text-gray-700 whitespace-pre-wrap">{selectedQuery.response}</p>
+          </div>
+          
+          {selectedQuery.full_conversation && (
+            <button
+              onClick={() => navigateTo(`fullConversation/${selectedQuery.id}`)}
+              className="mt-4 text-navy-blue hover:underline"
+            >
+              View Full Conversation
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-navy-blue">Recent AI Queries</h2>
+              <button 
+                onClick={() => handleNavigation('allQueries')}
+                className="text-navy-blue hover:underline text-sm"
+              >
+                View All
+              </button>
+            </div>
+            
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Query
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Time
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Document
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {queryLogs.length > 0 ? (
+                    queryLogs.slice(0, 3).map((log) => (
+                      <tr key={log.id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {log.query}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 flex items-center">
+                          <Clock className="h-4 w-4 mr-1" />
+                          {log.timestamp}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {log.document}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-navy-blue">
+                          <button 
+                            onClick={() => handleViewQuery(log.id)}
+                            className="hover:underline"
+                          >
+                            View
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500">
+                        No recent queries found.
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500">
-                      No recent queries found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <div>
+            <PDFViewer onPDFSelect={handlePDFSelect} />
           </div>
         </div>
-        
-        <div>
-          <PDFViewer onPDFSelect={handlePDFSelect} />
-        </div>
-      </div>
+      )}
     </div>
   );
 };

@@ -84,6 +84,7 @@ const AIChat: React.FC<AIChatProps> = ({
       }));
     
     console.log('Sending message history:', JSON.stringify(messageHistory));
+    console.log('Active PDF IDs:', activePdfIds);
     
     try {
       // Get AI response
@@ -128,8 +129,20 @@ const AIChat: React.FC<AIChatProps> = ({
         )
       );
       
-      // Set error message for the user
-      setError('Failed to connect to the AI service. Please check your connection and try again.');
+      // Set more specific error message for the user
+      if (error instanceof Error) {
+        if (error.message.includes('network') || error.message.includes('connection')) {
+          setError('Failed to connect to the AI service. Please check your network connection and try again.');
+        } else if (error.message.includes('timeout')) {
+          setError('The AI service took too long to respond. Please try again with a simpler query.');
+        } else if (error.message.includes('unauthorized') || error.message.includes('authentication')) {
+          setError('Authentication error. Please log out and log back in to refresh your session.');
+        } else {
+          setError(`Error: ${error.message}`);
+        }
+      } else {
+        setError('An unexpected error occurred. Please try again later.');
+      }
     } finally {
       setIsProcessing(false);
     }

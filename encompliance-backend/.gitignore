@@ -39,4 +39,11 @@ ENV/
 *.swo
 
 # Logs
-*.log 
+*.log
+
+# Test data
+add_test_data.py
+
+# Document storage
+encompliance-documents/
+../encompliance-documents/ 

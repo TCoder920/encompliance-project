@@ -8,7 +8,7 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
   withCredentials: false, // Using Bearer token authentication instead of cookies
-  timeout: 10000, // Set a reasonable timeout
+  timeout: 60000, // Increased timeout to 60 seconds for PDF processing
 });
 
 // Add request interceptor to include auth token in all requests

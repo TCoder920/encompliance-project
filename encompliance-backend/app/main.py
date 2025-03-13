@@ -64,18 +64,26 @@ async def add_cors_headers(request: Request, call_next):
     return response
 
 # Import routers after creating the app to avoid circular imports
-from app.api.routes import chat
-from app.api import auth
-from app.api.routes import protected
 from app.api.routes import users
+from app.api import auth
+from app.api.routes import chat
 from app.api.routes import pdfs
+from app.api.routes import queries
 
 # Include routers
-app.include_router(chat.router, prefix="/api/v1")
-app.include_router(auth.router, prefix="/api/v1")
-app.include_router(protected.router, prefix="/api/v1")
 app.include_router(users.router, prefix="/api/v1/users")
-app.include_router(pdfs.router, prefix="/api/v1/pdfs")
+app.include_router(auth.router, prefix="/api/v1")
+app.include_router(chat.router, prefix="/api/v1")
+app.include_router(pdfs.router, prefix="/api/v1")
+app.include_router(queries.router, prefix="/api/v1")
+
+# Add a root level router for certain API endpoints that are being called directly with /api/ prefix
+app.include_router(queries.router, prefix="/api")
+app.include_router(chat.router, prefix="/api")
+
+# Add routes for the nested path that the frontend is using
+app.include_router(chat.router, prefix="/api/v1/api")
+app.include_router(queries.router, prefix="/api/v1/api")
 
 @app.get("/")
 async def root():
