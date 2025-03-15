@@ -1,6 +1,10 @@
 import api from './api';
 import docLogger from '../utils/documentLogger';
 
+// In Vite, environment variables are accessed via import.meta.env
+// See: https://vitejs.dev/guide/env-and-mode.html
+const backendUrl = (import.meta.env.VITE_BACKEND_URL as string) || 'http://localhost:8000';
+
 export interface Document {
   id: number;
   filename: string;
@@ -153,7 +157,7 @@ class DocumentService {
   // Utility function to get the authenticated URL for a document
   getAuthenticatedDocumentUrl(documentId: string): string {
     const token = localStorage.getItem('token');
-    return `${window.location.origin}/document/${documentId}?token=${token}`;
+    return `${backendUrl}/document/${documentId}?token=${token}`;
   }
 
   // Utility function to get the authenticated URL for the Minimum Standards PDF
@@ -166,7 +170,7 @@ class DocumentService {
     const token = localStorage.getItem('token');
     console.log(`Generating embeddable URL for document ${documentId}`);
     // Point directly to the correct endpoint for viewing documents
-    return `${window.location.origin}/api/v1/documents/view/${documentId}?token=${token}`;
+    return `${backendUrl}/api/v1/view/${documentId}?token=${token}`;
   }
 
   // Utility function to get the embeddable URL for the Minimum Standards PDF
@@ -177,13 +181,16 @@ class DocumentService {
   // Open document in a new tab
   openDocumentInNewTab(documentId: string): void {
     const token = localStorage.getItem('token');
-    const url = window.location.origin + '/document/' + documentId + '?token=' + token;
+    // Use the correct API endpoint for viewing documents
+    const url = `${backendUrl}/api/v1/view/${documentId}?token=${token}`;
+    console.log(`Opening document in new tab: ${url}`);
     window.open(url, '_blank');
   }
 
   // Open Minimum Standards PDF in a new tab
   openMinimumStandardsInNewTab(): void {
-    const url = this.getAuthenticatedMinimumStandardsUrl();
+    const url = this.getEmbeddableMinimumStandardsUrl();
+    console.log(`Opening minimum standards in new tab: ${url}`);
     window.open(url, '_blank');
   }
 

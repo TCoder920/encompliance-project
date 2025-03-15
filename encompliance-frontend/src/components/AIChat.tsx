@@ -6,6 +6,8 @@ import { useModel } from '../contexts/ModelContext';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import { formatDateTime } from '../utils/dateUtils';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface Message {
   id: number;
@@ -535,7 +537,7 @@ const AIChat: React.FC<AIChatProps> = ({
       )}
       
       {/* Debug button - only visible in development */}
-      {process.env.NODE_ENV === 'development' && (
+      {false && process.env.NODE_ENV === 'development' && (
         <div className="px-4 pt-2 flex space-x-2">
           <button
             onClick={async () => {
@@ -690,6 +692,15 @@ ${validDocumentIds.length > 0 ? validDocumentIds.join(', ') : 'none'}
               {message.isLoading ? (
                 <div className="flex items-center justify-center py-2">
                   <Loader2 className="h-5 w-5 animate-spin text-gray-500" />
+                </div>
+              ) : message.sender === 'ai' ? (
+                <div className="text-sm markdown-content">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {message.text}
+                  </ReactMarkdown>
+                  {message.isStreaming && (
+                    <span className="inline-block w-2 h-4 ml-1 bg-gray-500 animate-pulse"></span>
+                  )}
                 </div>
               ) : (
                 <p className="text-sm whitespace-pre-wrap">

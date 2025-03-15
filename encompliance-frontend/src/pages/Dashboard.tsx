@@ -311,11 +311,8 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
   const handleViewStandards = () => {
     console.log(`[DEBUG] Dashboard: Redirecting to official minimum standards document`);
     
-    // Define the direct PDF URL for the Texas Health and Human Services minimum standards
-    const pdfUrl = "https://www.hhs.texas.gov/sites/default/files/documents/doing-business-with-hhs/provider-portal/protective-services/ccl/min-standards/chapter-746-centers.pdf";
-    
-    // Open the PDF URL in a new tab
-    window.open(pdfUrl, '_blank');
+    // Use the document service to open the minimum standards in a new tab
+    documentService.openMinimumStandardsInNewTab();
   };
   
   const handleViewDocument = (documentId: number) => {
@@ -323,8 +320,8 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
     const docIdStr = documentId.toString();
     console.log(`[DEBUG] Dashboard: Viewing document with ID: ${docIdStr}`);
     
-    // Use the direct document page route that should load the PDF properly
-    navigateTo(`document/${docIdStr}`);
+    // Use the document service to open the document in a new tab
+    documentService.openDocumentInNewTab(docIdStr);
   };
   
   const handleDeleteDocument = async (documentId: number) => {
@@ -546,8 +543,8 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
                             setQueryLogs([]);
                             setLocalError(null);
                             
-                            // Force refresh the page to ensure all queries are removed from view
-                            window.location.reload();
+                            // Remove the page refresh
+                            // window.location.reload();
                           })
                           .catch(error => {
                             console.error('Error deleting all queries:', error);
@@ -649,34 +646,36 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
             </div>
             
             {/* Add Debug Button */}
-            <button 
-              onClick={async () => {
-                try {
-                  setIsLoading(true);
-                  const api = (await import('../services/api')).default;
-                  console.log('[DEBUG] Token being used:', localStorage.getItem('token'));
-                  const response = await api.get('/documents/list');
-                  console.log('[DEBUG RESPONSE]', response);
-                  console.log('[DEBUG] Documents from API:', response.data);
-                  
-                  if (response.data && Array.isArray(response.data.documents)) {
-                    console.log(`[DEBUG] Found ${response.data.documents.length} documents in direct API call`);
-                    alert(`Found ${response.data.documents.length} documents. Check console for details.`);
-                  } else {
-                    console.log('[DEBUG] Unexpected response format:', response.data);
-                    alert('Unexpected response format. Check console.');
+            {false && (
+              <button 
+                onClick={async () => {
+                  try {
+                    setIsLoading(true);
+                    const api = (await import('../services/api')).default;
+                    console.log('[DEBUG] Token being used:', localStorage.getItem('token'));
+                    const response = await api.get('/documents/list');
+                    console.log('[DEBUG RESPONSE]', response);
+                    console.log('[DEBUG] Documents from API:', response.data);
+                    
+                    if (response.data && Array.isArray(response.data.documents)) {
+                      console.log(`[DEBUG] Found ${response.data.documents.length} documents in direct API call`);
+                      alert(`Found ${response.data.documents.length} documents. Check console for details.`);
+                    } else {
+                      console.log('[DEBUG] Unexpected response format:', response.data);
+                      alert('Unexpected response format. Check console.');
+                    }
+                  } catch (err: any) {
+                    console.error('[DEBUG] Error calling API directly:', err);
+                    alert(`Error: ${err.message}. Check console.`);
+                  } finally {
+                    setIsLoading(false);
                   }
-                } catch (err: any) {
-                  console.error('[DEBUG] Error calling API directly:', err);
-                  alert(`Error: ${err.message}. Check console.`);
-                } finally {
-                  setIsLoading(false);
-                }
-              }}
-              className="mb-4 bg-gray-200 text-gray-800 px-3 py-1 text-xs rounded"
-            >
-              Debug Documents
-            </button>
+                }}
+                className="mb-4 bg-gray-200 text-gray-800 px-3 py-1 text-xs rounded"
+              >
+                Debug Documents
+              </button>
+            )}
             
             {/* Improve document display with better containment */}
             <div className="grid grid-cols-1 gap-4 mt-4">
@@ -684,7 +683,12 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
                 <div key={doc.id} className="bg-gray-50 rounded-lg border border-gray-200 p-4">
                   <div className="flex justify-between items-center">
                     <div className="flex-1 mr-4">
-                      <h3 className="text-md font-semibold truncate">{doc.filename}</h3>
+                      <h3 
+                        className="text-md font-semibold truncate text-blue-600 hover:text-blue-800 cursor-pointer flex items-center"
+                        onClick={() => handleViewDocument(doc.id)}
+                      >
+                        {doc.filename}
+                      </h3>
                       <div className="text-xs text-gray-500 mt-1">
                         Uploaded: {formatDateTime(doc.uploaded_at)}
                       </div>
@@ -712,13 +716,6 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
           </div>
         </div>
       )}
-      
-      <button
-        onClick={() => navigateTo('dashboard')}
-        className="mt-6 px-4 py-2 bg-navy-blue text-white rounded hover:bg-blue-700"
-      >
-        Back to Dashboard
-      </button>
     </div>
   );
 };

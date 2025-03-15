@@ -106,9 +106,6 @@ const AllQueriesPage: React.FC<AllQueriesPageProps> = ({ navigateTo }) => {
       // Clear the logs from state
       setQueryLogs([]);
       setError('');
-      
-      // Force refresh the page to ensure all queries are removed from view
-      window.location.reload();
     } catch (err) {
       console.error('Error deleting all queries:', err);
       setError('Failed to delete all conversations. Please try again.');
