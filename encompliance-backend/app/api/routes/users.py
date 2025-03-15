@@ -8,6 +8,9 @@ from app.models.user import User
 from app.schemas.user import User as UserSchema, UserUpdate
 from app.auth.dependencies import get_current_active_user, get_current_user
 import logging
+from sqlalchemy import func
+from app.models.query_log import QueryLog
+from app.models.document import Document
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -168,4 +171,41 @@ async def update_current_user(
     db.commit()
     db.refresh(current_user)
     
-    return current_user 
+    return current_user
+
+@router.delete("/me")
+async def delete_current_user(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Delete the current user's profile and all associated data.
+    """
+    try:
+        # Get user ID for reference
+        user_id = current_user.id
+        
+        # 1. Delete all query logs associated with the user
+        db.query(QueryLog).filter(QueryLog.user_id == user_id).delete()
+        
+        # 2. Mark all documents uploaded by the user as deleted
+        documents = db.query(Document).filter(Document.uploaded_by == user_id).all()
+        for doc in documents:
+            doc.is_deleted = True
+            doc.deleted_at = func.now()
+            doc.deleted_by = user_id
+        
+        # 3. Delete the user
+        db.delete(current_user)
+        
+        # Commit all changes
+        db.commit()
+        
+        return {"message": "User profile and all associated data deleted successfully"}
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error deleting user: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while deleting the user profile"
+        ) 

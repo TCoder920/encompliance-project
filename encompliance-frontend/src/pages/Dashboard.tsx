@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Search, FileText, Upload, PlusCircle, Eye, Trash2 } from 'lucide-react';
+import { Clock, Search, FileText, Upload, PlusCircle, Eye, Trash2, X, MessageSquare } from 'lucide-react';
 import ErrorMessage from '../components/ErrorMessage';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
@@ -7,21 +7,8 @@ import documentService from '../services/documentService';
 import DocumentUploader from '../components/DocumentUploader';
 import * as documentLogger from '../utils/documentLogger';
 import { formatDate, formatRelativeTime, formatDateTime } from '../utils/dateUtils';
-
-interface QueryLog {
-  id: number;
-  query_text: string;
-  response_text: string;
-  created_at: string;
-  document_reference?: string;
-  conversation_id?: number;
-  // Legacy fields that might still be present
-  query?: string;
-  response?: string;
-  timestamp?: string;
-  document?: string;
-  full_conversation?: boolean;
-}
+import { deleteQuery, deleteAllQueries } from '../services/aiService';
+import { deduplicateQueryLogs, QueryLog } from '../utils/queryUtils';
 
 interface DashboardProps {
   navigateTo: (page: string) => void;
@@ -33,6 +20,10 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
   const [localError, setLocalError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [queryLogs, setQueryLogs] = useState<QueryLog[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalLogs, setTotalLogs] = useState(0);
+  const [logsPerPage, setLogsPerPage] = useState(5);
   const [accountDetails, setAccountDetails] = useState({
     operationType: '',
     state: '',
@@ -76,23 +67,21 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
       }
     };
     
-    // Ensure Minimum Standards PDF is available
-    const ensureMinimumStandards = async () => {
-      try {
-        await documentService.ensureMinimumStandardsPdf();
-      } catch (err) {
-        console.error('Error ensuring Minimum Standards PDF:', err);
-      }
-    };
-    
     // Fetch actual query logs from the backend
     const fetchQueryLogs = async () => {
       try {
         console.log('Fetching query logs from API...');
+        console.log(`Page: ${page}, Logs per page: ${logsPerPage}`);
+        
         // Use the API service with the correct base URL
-        const response = await api.get('/query-logs');
+        const skip = (page - 1) * logsPerPage;
+        const response = await api.get(`/query-logs?limit=${logsPerPage}&skip=${skip}`);
         
         console.log('Raw API response:', response);
+        
+        // Set total logs and calculate total pages
+        setTotalLogs(response.data.total || 0);
+        setTotalPages(Math.ceil((response.data.total || 0) / logsPerPage));
         
         if (response.data && response.data.logs) {
           console.log('Fetched query logs:', response.data.logs);
@@ -117,14 +106,19 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
               id: log.id,
               query_text: log.query_text,
               response_text: log.response_text ? log.response_text.substring(0, 30) + '...' : 'None',
-              created_at: log.created_at
+              created_at: log.created_at,
+              conversation_id: log.conversation_id,
+              document_reference: log.document_reference
             });
             
             return log;
           });
           
-          console.log('Setting query logs state with:', validLogs);
-          setQueryLogs(validLogs || []);
+          // Use the utility function to deduplicate logs
+          const deduplicatedLogs = deduplicateQueryLogs(validLogs);
+          
+          console.log('Setting query logs state with:', deduplicatedLogs);
+          setQueryLogs(deduplicatedLogs || []);
         } else {
           console.warn('Query logs API returned no data:', response.data);
           setQueryLogs([]);
@@ -160,7 +154,6 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
     // Call all the data loading functions
     const loadAllData = async () => {
       try {
-        await ensureMinimumStandards();
         await fetchQueryLogs();
         await fetchAccountDetails();
         await refreshAllDocuments(); // Use our new refresh function
@@ -178,7 +171,7 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
     return () => {
       if (authError) clearError();
     };
-  }, [authError, clearError, user, preloadedDocuments]);
+  }, [authError, clearError, user, preloadedDocuments, page, logsPerPage]);
   
   const handleNavigation = (page: string) => {
     try {
@@ -224,6 +217,37 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
     } catch (err) {
       console.error('Error fetching query details:', err);
       setLocalError('Failed to load query details. Please try again.');
+    }
+  };
+  
+  const handleDeleteQuery = async (queryId: number, event: React.MouseEvent) => {
+    // Stop the click from propagating to the parent (which would open the query)
+    event.stopPropagation();
+    
+    // Confirm deletion
+    if (!window.confirm('Are you sure you want to delete this conversation?')) {
+      return;
+    }
+    
+    try {
+      setIsLoading(true);
+      await deleteQuery(queryId);
+      
+      // Remove the deleted query from the state
+      setQueryLogs(prevLogs => prevLogs.filter(log => log.id !== queryId));
+      
+      // If the deleted query is currently selected, close the summary
+      if (selectedQuery && selectedQuery.id === queryId) {
+        setSelectedQuery(null);
+        setShowQuerySummary(false);
+      }
+      
+      setLocalError(null);
+    } catch (error) {
+      console.error('Error deleting query:', error);
+      setLocalError('Failed to delete the conversation. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
   
@@ -285,9 +309,13 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
   };
   
   const handleViewStandards = () => {
-    console.log(`[DEBUG] Dashboard: Navigating to minimum standards document page`);
-    // Navigate to the document page with minimum-standards ID for direct access
-    navigateTo('document/minimum-standards');
+    console.log(`[DEBUG] Dashboard: Redirecting to official minimum standards document`);
+    
+    // Define the direct PDF URL for the Texas Health and Human Services minimum standards
+    const pdfUrl = "https://www.hhs.texas.gov/sites/default/files/documents/doing-business-with-hhs/provider-portal/protective-services/ccl/min-standards/chapter-746-centers.pdf";
+    
+    // Open the PDF URL in a new tab
+    window.open(pdfUrl, '_blank');
   };
   
   const handleViewDocument = (documentId: number) => {
@@ -308,6 +336,12 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
     } catch (err) {
       console.error('Error deleting document:', err);
       setLocalError('Failed to delete document. Please try again.');
+    }
+  };
+  
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setPage(newPage);
     }
   };
   
@@ -498,21 +532,63 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
           <div className="bg-white p-6 rounded-lg shadow-md">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold text-navy-blue">Recent AI Queries</h2>
-              <button 
-                onClick={() => handleNavigation('allQueries')}
-                className="text-navy-blue hover:underline text-sm"
-              >
-                View All
-              </button>
+              <div className="flex items-center space-x-3">
+                {queryLogs.length > 0 && (
+                  <button
+                    onClick={() => {
+                      if (window.confirm('Are you sure you want to delete all your recent queries? This action cannot be undone.')) {
+                        setIsLoading(true);
+                        
+                        // Use the new deleteAllQueries function
+                        deleteAllQueries()
+                          .then((result) => {
+                            console.log(`Successfully deleted ${result.count} queries`);
+                            setQueryLogs([]);
+                            setLocalError(null);
+                            
+                            // Force refresh the page to ensure all queries are removed from view
+                            window.location.reload();
+                          })
+                          .catch(error => {
+                            console.error('Error deleting all queries:', error);
+                            setLocalError('Failed to delete all conversations. Please try again.');
+                          })
+                          .finally(() => {
+                            setIsLoading(false);
+                          });
+                      }
+                    }}
+                    className="text-red-600 hover:text-red-800 text-sm flex items-center"
+                  >
+                    <Trash2 className="h-3 w-3 mr-1" />
+                    Delete All
+                  </button>
+                )}
+                <button 
+                  onClick={() => handleNavigation('allQueries')}
+                  className="text-navy-blue hover:underline text-sm"
+                >
+                  View All
+                </button>
+              </div>
             </div>
             
             {queryLogs.length > 0 ? (
               <div className="space-y-4">
                 {queryLogs.slice(0, 3).map((log, index) => (
                   <div key={index} className="border-b border-gray-200 pb-3 last:border-b-0 last:pb-0">
-                    <div className="flex items-center text-sm text-gray-500 mb-1">
-                      <Clock className="h-4 w-4 mr-1" />
-                      <span>{formatDateTime(log.created_at)}</span>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center text-sm text-gray-500">
+                        <Clock className="h-4 w-4 mr-1" />
+                        <span>{formatRelativeTime(log.created_at || '')}</span>
+                      </div>
+                      <button
+                        onClick={(e) => handleDeleteQuery(log.id, e)}
+                        className="text-gray-400 hover:text-red-500"
+                        title="Delete conversation"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </div>
                     <p className="font-medium truncate">{log.query_text}</p>
                     <div className="mt-2 text-sm text-gray-600 bg-gray-50 p-2 rounded">
@@ -636,6 +712,13 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
           </div>
         </div>
       )}
+      
+      <button
+        onClick={() => navigateTo('dashboard')}
+        className="mt-6 px-4 py-2 bg-navy-blue text-white rounded hover:bg-blue-700"
+      >
+        Back to Dashboard
+      </button>
     </div>
   );
 };

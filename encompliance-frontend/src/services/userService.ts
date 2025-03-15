@@ -54,5 +54,17 @@ export const userService = {
       console.error('Auth debug error:', error);
       throw error;
     }
+  },
+  
+  async deleteAccount(): Promise<{ message: string }> {
+    try {
+      const response = await api.delete('/users/me');
+      // Clear auth token after successful deletion
+      localStorage.removeItem('token');
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      throw error;
+    }
   }
 }; 

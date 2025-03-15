@@ -195,3 +195,23 @@ Additionally, major improvements were made to document handling, including enhan
 UI refinements addressed AI query display issues, routing inconsistencies, and document access bugs. The AllQueriesPage was added for improved navigation, and the Header/Footer components were restored for a consistent layout. Error handling was strengthened across services, and backend restarts were performed to apply fixes effectively.
 
 Extensive troubleshooting efforts resolved document upload failures, inconsistencies in API routing, and frontend-backend mismatches. Logging utilities were added to track errors and improve debugging. The system now efficiently processes document retrieval, ensures AI interactions are context-aware, and enhances user experience with better visibility into document and login activity.
+
+### **20250315 github push**
+
+Updated PDF URL Handling:
+The SignupPage.tsx file was modified to use a direct URL for accessing the Minimum Standards PDF instead of making a fetch request to a constructed endpoint. This change simplifies the process of accessing the PDF and ensures that the correct document is loaded.
+Removed Unnecessary Fetch Logic:
+The logic that attempted to pre-load the Minimum Standards PDF upon signup was removed. This included the ensureMinimumStandards function and its associated calls, which were deemed unnecessary for the user flow.
+Updated Document Service:
+The getAuthenticatedMinimumStandardsUrl and getEmbeddableMinimumStandardsUrl functions in the document service were updated to return the direct PDF URL, ensuring that any future calls to these functions will point to the correct document.
+Code Cleanup:
+Any references to the previous logic for accessing the Minimum Standards PDF were removed from the codebase, streamlining the application and reducing potential confusion.
+Troubleshooting Methods
+Code Review:
+Conducted a thorough review of the SignupPage.tsx and document service files to identify any outdated or unnecessary code related to PDF access.
+Testing:
+After making changes, the application was tested to ensure that the direct PDF URL was accessible and that the signup process functioned correctly without errors related to PDF fetching.
+Console Logging:
+Used console logs to verify that the correct flow was followed during the signup process and that no errors occurred when attempting to access the PDF.
+Version Control:
+Utilized Git to track changes and ensure that all modifications were properly committed, allowing for easy rollback if any issues arose.

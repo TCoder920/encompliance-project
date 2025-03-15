@@ -1,18 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { User, Mail, Phone, Lock, Save, AlertCircle } from 'lucide-react';
+import { User, Mail, Phone, Lock, Save, AlertCircle, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import ErrorMessage from '../components/ErrorMessage';
 import api from '../services/api';
+import { userService } from '../services/userService';
 
 interface UserSettingsPageProps {
   navigateTo: (page: string) => void;
 }
 
 const UserSettingsPage: React.FC<UserSettingsPageProps> = ({ navigateTo }) => {
-  const { user, error: authError, clearError } = useAuth();
+  const { user, error: authError, clearError, logout } = useAuth();
   const [localError, setLocalError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const [formData, setFormData] = useState({
     fullName: '',
@@ -75,6 +78,30 @@ const UserSettingsPage: React.FC<UserSettingsPageProps> = ({ navigateTo }) => {
     } finally {
       setIsLoading(false);
     }
+  };
+  
+  const handleDeleteAccount = async () => {
+    if (!showDeleteConfirm) {
+      setShowDeleteConfirm(true);
+      return;
+    }
+    
+    try {
+      setIsDeleting(true);
+      await userService.deleteAccount();
+      logout();
+      navigateTo('login');
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      setLocalError('Failed to delete account. Please try again later.');
+      setShowDeleteConfirm(false);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+  
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
   };
   
   return (
@@ -224,6 +251,51 @@ const UserSettingsPage: React.FC<UserSettingsPageProps> = ({ navigateTo }) => {
                   </>
                 )}
               </button>
+            </div>
+            
+            <div className="pt-8 border-t border-gray-200 mt-8">
+              <h3 className="text-lg font-medium text-red-600">Danger Zone</h3>
+              <p className="mt-1 text-sm text-gray-500">
+                Once you delete your account, all of your data will be permanently removed.
+                This action cannot be undone.
+              </p>
+              
+              {!showDeleteConfirm ? (
+                <button
+                  type="button"
+                  onClick={handleDeleteAccount}
+                  className="mt-4 flex items-center justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Account
+                </button>
+              ) : (
+                <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-sm text-red-700 font-medium">
+                    Are you sure you want to delete your account? This will remove all your data and cannot be undone.
+                  </p>
+                  <div className="mt-3 flex space-x-3">
+                    <button
+                      type="button"
+                      onClick={handleDeleteAccount}
+                      disabled={isDeleting}
+                      className={`flex items-center justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 ${
+                        isDeleting ? 'opacity-70 cursor-not-allowed' : ''
+                      }`}
+                    >
+                      {isDeleting ? 'Deleting...' : 'Yes, Delete My Account'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelDelete}
+                      disabled={isDeleting}
+                      className="flex items-center justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-navy-blue"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </form>

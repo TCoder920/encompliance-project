@@ -91,31 +91,12 @@ const SignupPage: React.FC<SignupPageProps> = ({ onStateSelect, navigateTo }) =>
       
       await signup(signupData);
       
-      // Only continue with the flow if there was no error
       // The signup function in AuthContext handles token storage
       // We'll check for authError before proceeding
       if (!authError) {
         console.log('Signup success, navigating to dashboard...');
         
-        // Force access to the minimum standards PDF by making a request to load it
-        try {
-          // Make request to view the PDF to ensure it's loaded for the user
-          const response = await fetch(`${import.meta.env.VITE_API_URL}/documents/view/childcare-746-centers`, {
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-          });
-          
-          if (response.ok) {
-            console.log('Successfully accessed Minimum Standards PDF');
-          } else {
-            console.warn('Failed to access Minimum Standards PDF:', response.status);
-          }
-        } catch (pdfErr) {
-          console.error('Error accessing Minimum Standards PDF:', pdfErr);
-        }
-        
-        // Redirect to dashboard instead of operation type selection
+        // Navigate to the dashboard
         if (navigateTo) {
           navigateTo('dashboard');
         }

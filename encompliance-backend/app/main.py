@@ -81,6 +81,7 @@ from app.api.routes import chat
 # from app.api.routes import pdfs  # Removed - using documents.py exclusively
 from app.api.routes import documents
 from app.api.routes import queries
+from app.api.routes import settings
 
 # Include routers
 app.include_router(users.router, prefix="/api/v1/users")
@@ -89,16 +90,19 @@ app.include_router(chat.router, prefix="/api/v1")
 # app.include_router(pdfs.router, prefix="/api/v1")  # Removed - using documents.py exclusively
 app.include_router(documents.router, prefix="/api/v1")  # Primary document routes
 app.include_router(queries.router, prefix="/api/v1")
+app.include_router(settings.router, prefix="/api/v1")
 
 # Add a root level router for certain API endpoints that are being called directly with /api/ prefix
 app.include_router(queries.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
 app.include_router(documents.router, prefix="/api")  # Add documents router to /api prefix
+app.include_router(settings.router, prefix="/api")  # Add settings router to /api prefix
 
 # Add routes for the nested path that the frontend is using
 app.include_router(chat.router, prefix="/api/v1/api")
 app.include_router(queries.router, prefix="/api/v1/api")
 app.include_router(documents.router, prefix="/api/v1/api")  # Add documents router to nested path
+app.include_router(settings.router, prefix="/api/v1/api")  # Add settings router to nested path
 
 @app.get("/")
 async def root():

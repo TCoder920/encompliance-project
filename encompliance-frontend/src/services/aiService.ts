@@ -128,3 +128,29 @@ export const getStreamingAIResponse = (
     return () => {}; // Return empty function as fallback
   }
 };
+
+/**
+ * Delete a query from the history.
+ */
+export const deleteQuery = async (queryId: number): Promise<{ message: string }> => {
+  try {
+    const response = await api.delete(`/query/${queryId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting query:', error);
+    throw error;
+  }
+};
+
+/**
+ * Delete all queries for the current user.
+ */
+export const deleteAllQueries = async (): Promise<{ message: string, count: number }> => {
+  try {
+    const response = await api.delete('/queries/all');
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting all queries:', error);
+    throw error;
+  }
+};

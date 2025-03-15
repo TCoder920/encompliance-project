@@ -21,7 +21,7 @@ export function isDateInFuture(dateString: string): boolean {
 /**
  * Formats a date string into a standardized readable format
  * @param dateString - The date string to format
- * @param includeTimes - Whether to include time in the formatted output (default: true)
+ * @param includeTime - Whether to include time in the formatted output (default: true)
  * @returns Formatted date string
  */
 export function formatDate(dateString: string, includeTime: boolean = true): string {

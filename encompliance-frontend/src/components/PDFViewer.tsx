@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Download, Trash2, Upload, AlertCircle } from 'lucide-react';
+import { FileText, Download, Trash2, Upload, AlertCircle, Eye } from 'lucide-react';
 import pdfService, { PDF } from '../services/pdfService';
 
 interface PDFViewerProps {
@@ -83,18 +83,32 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ onPDFSelect }) => {
 
   const handleDownload = async (pdf: PDF) => {
     try {
-      const filePath = await pdfService.downloadPDF(pdf.id);
+      setError(null);
+      const url = await pdfService.downloadPDF(pdf.id);
       
-      // Create a link to download the file
-      const link = document.createElement('a');
-      link.href = filePath;
-      link.download = pdf.filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // Create a temporary anchor element to trigger the download
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = pdf.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     } catch (err) {
       console.error('Download error:', err);
-      setError('Failed to download PDF. Please try again.');
+      setError('Failed to download PDF. Please check your connection and try again.');
+    }
+  };
+
+  const handleView = async (pdf: PDF) => {
+    try {
+      setError(null);
+      const url = await pdfService.downloadPDF(pdf.id);
+      
+      // Open the PDF in a new tab
+      window.open(url, '_blank');
+    } catch (err) {
+      console.error('View error:', err);
+      setError('Failed to view PDF. Please check your connection and try again.');
     }
   };
 
@@ -183,6 +197,13 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ onPDFSelect }) => {
                 </div>
               </div>
               <div className="flex space-x-2">
+                <button
+                  onClick={() => handleView(pdf)}
+                  className="p-2 text-gray-600 hover:text-navy-blue"
+                  title="View"
+                >
+                  <Eye className="h-5 w-5" />
+                </button>
                 <button
                   onClick={() => handleDownload(pdf)}
                   className="p-2 text-gray-600 hover:text-navy-blue"

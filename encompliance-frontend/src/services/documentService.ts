@@ -158,8 +158,7 @@ class DocumentService {
 
   // Utility function to get the authenticated URL for the Minimum Standards PDF
   getAuthenticatedMinimumStandardsUrl(): string {
-    const token = localStorage.getItem('token');
-    return `${window.location.origin}/document/minimum-standards?token=${token}`;
+    return "https://www.hhs.texas.gov/sites/default/files/documents/doing-business-with-hhs/provider-portal/protective-services/ccl/min-standards/chapter-746-centers.pdf";
   }
 
   // Utility function to get the embeddable URL for a document (for iframe embedding)
@@ -172,10 +171,7 @@ class DocumentService {
 
   // Utility function to get the embeddable URL for the Minimum Standards PDF
   getEmbeddableMinimumStandardsUrl(): string {
-    const token = localStorage.getItem('token');
-    console.log(`Generating embeddable URL for minimum standards`);
-    // Point directly to the specific childcare standards endpoint
-    return `${window.location.origin}/api/v1/documents/view/childcare-746-centers?token=${token}`;
+    return "https://www.hhs.texas.gov/sites/default/files/documents/doing-business-with-hhs/provider-portal/protective-services/ccl/min-standards/chapter-746-centers.pdf";
   }
 
   // Open document in a new tab
@@ -189,17 +185,6 @@ class DocumentService {
   openMinimumStandardsInNewTab(): void {
     const url = this.getAuthenticatedMinimumStandardsUrl();
     window.open(url, '_blank');
-  }
-
-  // Ensure the Minimum Standards PDF is available to the user
-  async ensureMinimumStandardsPdf(): Promise<boolean> {
-    try {
-      const response = await api.get('/documents/ensure-minimum-standards');
-      return response.data.success;
-    } catch (error) {
-      console.error('Error ensuring Minimum Standards PDF:', error);
-      return false;
-    }
   }
 
   /**

@@ -12,6 +12,8 @@ from app.auth.dependencies import get_current_user
 from fastapi.responses import JSONResponse, StreamingResponse
 from app.core.chat_utils import enhance_system_message_with_pdf_context, get_compliance_system_message
 import traceback
+import datetime
+from sqlalchemy import func
 
 router = APIRouter(tags=["chat"])
 
@@ -141,15 +143,45 @@ async def chat(
         
         # Log the query
         try:
-            query_log = QueryLog(
-                user_id=current_user.id,
-                query=request.prompt,
-                response=response_text,
-                operation_type=request.operation_type,
-                document_reference=document_name
-            )
-            db.add(query_log)
-            db.commit()
+            # Check if this is a duplicate query (same user, same prompt, within last minute)
+            recent_time = func.now() - datetime.timedelta(minutes=1)
+            existing_log = db.query(QueryLog).filter(
+                QueryLog.user_id == current_user.id,
+                QueryLog.query == request.prompt,
+                QueryLog.created_at > recent_time
+            ).first()
+            
+            if existing_log:
+                print(f"Duplicate query detected, skipping log creation. Existing log ID: {existing_log.id}")
+            else:
+                # Generate a unique conversation ID if not provided
+                conversation_id = None
+                if message_history and len(message_history) > 0:
+                    # If this is part of an existing conversation, try to get the conversation_id
+                    # from the most recent query log with the same context
+                    recent_log = db.query(QueryLog).filter(
+                        QueryLog.user_id == current_user.id,
+                        QueryLog.document_reference == document_name
+                    ).order_by(QueryLog.created_at.desc()).first()
+                    
+                    if recent_log and recent_log.conversation_id:
+                        conversation_id = recent_log.conversation_id
+                    else:
+                        # Generate a new conversation ID based on timestamp
+                        conversation_id = int(datetime.datetime.now().timestamp())
+                
+                query_log = QueryLog(
+                    user_id=current_user.id,
+                    query=request.prompt,
+                    response=response_text,
+                    operation_type=request.operation_type,
+                    document_reference=document_name,
+                    document_id=document_ids[0] if document_ids and len(document_ids) > 0 else None,
+                    conversation_id=conversation_id
+                )
+                db.add(query_log)
+                db.commit()
+                print(f"Query log created with ID: {query_log.id}, conversation_id: {conversation_id}")
         except Exception as log_error:
             print(f"Error logging query: {str(log_error)}")
             # Continue even if logging fails
@@ -281,15 +313,45 @@ async def stream_chat(
                 
                 # Log the query after completion
                 try:
-                    query_log = QueryLog(
-                        user_id=current_user.id,
-                        query=request.prompt,
-                        response=collected_response,
-                        operation_type=request.operation_type,
-                        document_reference=document_name
-                    )
-                    db.add(query_log)
-                    db.commit()
+                    # Check if this is a duplicate query (same user, same prompt, within last minute)
+                    recent_time = func.now() - datetime.timedelta(minutes=1)
+                    existing_log = db.query(QueryLog).filter(
+                        QueryLog.user_id == current_user.id,
+                        QueryLog.query == request.prompt,
+                        QueryLog.created_at > recent_time
+                    ).first()
+                    
+                    if existing_log:
+                        print(f"Duplicate streaming query detected, skipping log creation. Existing log ID: {existing_log.id}")
+                    else:
+                        # Generate a unique conversation ID if not provided
+                        conversation_id = None
+                        if message_history and len(message_history) > 0:
+                            # If this is part of an existing conversation, try to get the conversation_id
+                            # from the most recent query log with the same context
+                            recent_log = db.query(QueryLog).filter(
+                                QueryLog.user_id == current_user.id,
+                                QueryLog.document_reference == document_name
+                            ).order_by(QueryLog.created_at.desc()).first()
+                            
+                            if recent_log and recent_log.conversation_id:
+                                conversation_id = recent_log.conversation_id
+                            else:
+                                # Generate a new conversation ID based on timestamp
+                                conversation_id = int(datetime.datetime.now().timestamp())
+                        
+                        query_log = QueryLog(
+                            user_id=current_user.id,
+                            query=request.prompt,
+                            response=collected_response,
+                            operation_type=request.operation_type,
+                            document_reference=document_name,
+                            document_id=document_ids[0] if document_ids and len(document_ids) > 0 else None,
+                            conversation_id=conversation_id
+                        )
+                        db.add(query_log)
+                        db.commit()
+                        print(f"Streaming query log created with ID: {query_log.id}, conversation_id: {conversation_id}")
                 except Exception as log_error:
                     print(f"Error logging query: {str(log_error)}")
             except Exception as e:
@@ -318,13 +380,45 @@ async def save_chat_history(
     try:
         # Get document name for reference (if any documents are provided)
         document_name = None
+        document_id = None
         if request.document_ids and len(request.document_ids) > 0:
             try:
                 document = db.query(Document).filter(Document.id == request.document_ids[0]).first()
                 if document:
                     document_name = document.filename
+                    document_id = document.id
             except Exception as e:
                 print(f"Error getting document info: {str(e)}")
+        
+        # Check if this is a duplicate query (same user, same prompt, within last minute)
+        recent_time = func.now() - datetime.timedelta(minutes=1)
+        existing_log = db.query(QueryLog).filter(
+            QueryLog.user_id == current_user.id,
+            QueryLog.query == request.user_message,
+            QueryLog.created_at > recent_time
+        ).first()
+        
+        if existing_log:
+            print(f"Duplicate chat history detected, skipping log creation. Existing log ID: {existing_log.id}")
+            return {"success": True, "message": "Chat history already exists"}
+        
+        # Generate a unique conversation ID if not provided
+        # Try to find the most recent conversation with the same document
+        conversation_id = None
+        recent_log = db.query(QueryLog).filter(
+            QueryLog.user_id == current_user.id,
+            QueryLog.document_reference == document_name
+        ).order_by(QueryLog.created_at.desc()).first()
+        
+        if recent_log and recent_log.conversation_id:
+            # Check if the recent log is from the last hour (likely the same conversation)
+            recent_time = datetime.datetime.now() - datetime.timedelta(hours=1)
+            if recent_log.created_at > recent_time:
+                conversation_id = recent_log.conversation_id
+        
+        # If no conversation ID found, generate a new one based on timestamp
+        if not conversation_id:
+            conversation_id = int(datetime.datetime.now().timestamp())
         
         # Log the query
         query_log = QueryLog(
@@ -332,12 +426,14 @@ async def save_chat_history(
             query=request.user_message,
             response=request.ai_response,
             operation_type=request.operation_type,
-            document_reference=document_name
+            document_reference=document_name,
+            document_id=document_id,
+            conversation_id=conversation_id
         )
         db.add(query_log)
         db.commit()
         
-        return {"success": True, "message": "Chat history saved successfully"}
+        return {"success": True, "message": "Chat history saved successfully", "conversation_id": conversation_id}
     except Exception as e:
         print(f"Error saving chat history: {str(e)}")
         return {"success": False, "error": str(e)} 
