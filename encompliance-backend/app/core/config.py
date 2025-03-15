@@ -1,5 +1,14 @@
 import os
-from pydantic_settings import BaseSettings
+from typing import Optional
+# Updated import for Pydantic v2.x
+try:
+    # Try to import from pydantic-settings (Pydantic v2.x)
+    from pydantic_settings import BaseSettings
+    PYDANTIC_V2 = True
+except ImportError:
+    # Fallback for Pydantic v1.x
+    from pydantic import BaseSettings
+    PYDANTIC_V2 = False
 from functools import lru_cache
 from dotenv import load_dotenv
 from typing import List, Optional
@@ -9,35 +18,48 @@ load_dotenv()
 
 class Settings(BaseSettings):
     """Application settings."""
-    PROJECT_NAME: str = "Encompliance API"
+    APP_NAME: str = "Encompliance.io API"
     API_V1_STR: str = "/api/v1"
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-here")
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    
+    # Security settings
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "your_super_secret_key_here")  # Should be set via environment variable
+    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "your_super_secret_key_change_this_in_production")
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
     
     # Database settings
     DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost/encompliance")
     
     # CORS settings
-    CORS_ORIGINS: List[str] = [
-        "http://localhost:5173",  # Frontend dev server
-        "http://localhost:3000",  # Alternative frontend port
-        "http://localhost:8080",  # Another common frontend port
-    ]
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
+    
+    # PDF storage settings - use folder within backend for simplicity
+    PDF_STORAGE_PATH: str = os.getenv(
+        "PDF_STORAGE_PATH", 
+        os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "encompliance-documents")
+    )
     
     # LLM settings
-    OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY", "")
-    USE_LOCAL_MODEL: bool = os.getenv("USE_LOCAL_MODEL", "true").lower() == "true"
-    LOCAL_MODEL_URL: str = os.getenv("LOCAL_MODEL_URL", "http://localhost:1234/v1")
+    USE_LOCAL_MODEL: bool = True  # Use local model by default
+    LOCAL_MODEL_URL: str = os.getenv("LOCAL_MODEL_URL", "http://127.0.0.1:1234")
     LOCAL_MODEL_NAME: str = os.getenv("LOCAL_MODEL_NAME", "local-model")
-    DEFAULT_MODEL: str = os.getenv("DEFAULT_MODEL", "local-model")
     
-    # PDF storage settings
-    PDF_STORAGE_PATH: str = os.getenv("PDF_STORAGE_PATH", os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../encompliance-documents")))
+    # OpenAI API settings (not currently active, but available for future use)
+    OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY", "")
+    DEFAULT_MODEL: str = "local-model"  # Default to local model
     
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
+    if PYDANTIC_V2:
+        # Pydantic v2.x uses model_config instead of Config
+        model_config = {
+            "env_file": ".env",
+            "case_sensitive": True,
+            "extra": "ignore"  # Allow extra fields as a safety measure
+        }
+    else:
+        # Pydantic v1.x uses Config class
+        class Config:
+            env_file = ".env"
+            case_sensitive = True
+            extra = "ignore"  # Allow extra fields as a safety measure
 
 @lru_cache()
 def get_settings() -> Settings:

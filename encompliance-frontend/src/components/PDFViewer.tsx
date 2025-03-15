@@ -18,6 +18,24 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ onPDFSelect }) => {
       setIsLoading(true);
       setError(null);
       const pdfList = await pdfService.listPDFs();
+      
+      // Ensure Chapter 746 PDF is present
+      const has746 = pdfList.some(pdf => pdf.filename.includes('746'));
+      if (!has746) {
+        pdfList.push({
+          id: -1, // Placeholder ID
+          filename: "Chapter 746 Centers.pdf",
+          filepath: "/static/chapter-746-centers.pdf", // Ensure this path is correct
+          file_type: "PDF",
+          file_size: 0,
+          uploaded_at: new Date().toISOString(),
+          uploaded_by: 0,
+          is_deleted: false,
+          deleted_at: null,
+          deleted_by: null
+        });
+      }
+      
       setPdfs(pdfList);
     } catch (err) {
       console.error('Error loading PDFs:', err);
@@ -81,14 +99,29 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ onPDFSelect }) => {
   };
 
   const handleDelete = async (pdf: PDF) => {
-    if (window.confirm(`Are you sure you want to delete ${pdf.filename}?`)) {
-      try {
-        await pdfService.deletePDF(pdf.id);
-        await loadPDFs(); // Reload the PDF list
-      } catch (err) {
-        console.error('Delete error:', err);
-        setError('Failed to delete PDF. Please try again.');
+    try {
+      // Prevent deletion of Chapter 746 Centers PDF
+      if (pdf.filename.toLowerCase().includes('746') || pdf.filename.toLowerCase().includes('childcare')) {
+        setError('The Chapter 746 Centers PDF cannot be deleted as it contains essential compliance standards.');
+        return;
       }
+      
+      // Regular confirmation for other PDFs
+      if (!window.confirm(`Are you sure you want to delete ${pdf.filename}?`)) {
+        return;
+      }
+      
+      setError(null); // Clear any previous errors
+      
+      // Attempt to delete the PDF
+      await pdfService.deletePDF(pdf.id);
+      console.log(`Successfully deleted PDF: ${pdf.filename}`);
+      
+      // Refresh the PDF list
+      await loadPDFs();
+    } catch (err) {
+      console.error('Delete error:', err);
+      setError('Failed to delete PDF. Please check your connection and try again.');
     }
   };
 
@@ -159,8 +192,17 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ onPDFSelect }) => {
                 </button>
                 <button
                   onClick={() => handleDelete(pdf)}
-                  className="p-2 text-gray-600 hover:text-red-600"
-                  title="Delete"
+                  className={`p-2 text-gray-600 ${
+                    pdf.filename.toLowerCase().includes('746') || pdf.filename.toLowerCase().includes('childcare')
+                      ? 'opacity-50 cursor-not-allowed'
+                      : 'hover:text-red-600'
+                  }`}
+                  title={
+                    pdf.filename.toLowerCase().includes('746') || pdf.filename.toLowerCase().includes('childcare')
+                      ? 'This document cannot be deleted'
+                      : 'Delete'
+                  }
+                  disabled={pdf.filename.toLowerCase().includes('746') || pdf.filename.toLowerCase().includes('childcare')}
                 >
                   <Trash2 className="h-5 w-5" />
                 </button>

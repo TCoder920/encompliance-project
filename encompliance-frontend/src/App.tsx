@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Building2, FileText, Search, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, MessageSquare, Home, User } from 'lucide-react';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
@@ -10,93 +9,143 @@ import DocumentViewerPage from './pages/DocumentViewerPage';
 import ManualUploadPage from './pages/ManualUploadPage';
 import Dashboard from './pages/Dashboard';
 import SearchRegulationsPage from './pages/SearchRegulationsPage';
+import UserSettingsPage from './pages/UserSettingsPage';
+import AllQueriesPage from './pages/AllQueriesPage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ModelProvider } from './contexts/ModelContext';
+import { checkAuthToken, initDebugTools } from './debug';
+import './App.css';
 
 function AppContent() {
-  const { isAuthenticated, loading } = useAuth();
   const [currentPage, setCurrentPage] = useState('home');
   const [selectedState, setSelectedState] = useState('');
   const [operationType, setOperationType] = useState('');
+  const [userDocuments, setUserDocuments] = useState<any[]>([]);
+  const { user, loading, logout } = useAuth();
 
-  // Debug logging for authentication state
+  // Initialize debug tools
   useEffect(() => {
-    console.log("App - Authentication state changed:", isAuthenticated);
-    console.log("App - Current page:", currentPage);
-  }, [isAuthenticated, currentPage]);
+    initDebugTools();
+  }, []);
 
-  // Redirect to dashboard if authenticated
+  // Set operation type from user data if available
   useEffect(() => {
-    if (isAuthenticated && currentPage === 'home') {
-      console.log("App - Redirecting to dashboard because user is authenticated");
-      setCurrentPage('dashboard');
+    if (user && user.operation_type) {
+      setOperationType(user.operation_type);
     }
-  }, [isAuthenticated, currentPage]);
+  }, [user]);
 
-  const navigateTo = (page: string) => {
-    console.log("App - Navigating to:", page);
-    setCurrentPage(page);
+  useEffect(() => {
+    console.log("App - Authentication state changed:", user);
+    console.log("App - Current page:", currentPage);
+    const tokenStatus = checkAuthToken();
+    console.log("Token status:", tokenStatus);
+  }, [user, currentPage]);
+
+  const handleRefreshDocuments = async () => {
+    try {
+      console.log('[DEBUG] App: Refreshing documents before rendering dashboard');
+      if (user) {
+        // Clear any previous document cache
+        localStorage.removeItem('cachedDocuments');
+        
+        // Pre-fetch documents to ensure they're loaded
+        const documentService = (await import('./services/documentService')).default;
+        const documents = await documentService.refreshDocumentCache();
+        console.log(`[DEBUG] App: Pre-loaded ${documents.length} documents`, documents);
+        setUserDocuments(documents);
+      }
+    } catch (err) {
+      console.error('[DEBUG] App: Error refreshing documents:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (currentPage === 'dashboard') {
+      handleRefreshDocuments();
+    }
+  }, [currentPage, user]);
+
+  const handleNavigate = (page: string) => {
+    console.log(`App - Navigating to: ${page}`);
+    
+    // If we're going to the dashboard, refresh documents first
+    if (page === 'dashboard') {
+      handleRefreshDocuments().then(() => {
+        setCurrentPage(page);
+      });
+    } else {
+      setCurrentPage(page);
+    }
   };
 
   const handleStateSelection = (state: string) => {
     setSelectedState(state);
-    navigateTo('operationType');
+    setCurrentPage('operationType');
   };
 
   const handleOperationTypeSelection = (type: string) => {
     setOperationType(type);
-    navigateTo('manualUpload');
+    setCurrentPage('dashboard');
   };
 
-  const handleManualUploadComplete = () => {
-    navigateTo('documentViewer');
-  };
-
-  const handleManualUploadSkip = () => {
-    navigateTo('documentViewer');
-  };
-
-  // Show loading indicator
   if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
+    return <div>Loading...</div>;
   }
 
   const renderPage = () => {
-    switch (currentPage) {
+    if (currentPage.startsWith('document/') || currentPage.startsWith('/document/')) {
+      const parts = currentPage.split('/');
+      // Extract the document ID from the path, handling both formats
+      const documentId = parts[parts.length - 1];
+      console.log(`[DEBUG] Navigating to document with ID: ${documentId}`);
+      return <DocumentViewerPage documentId={documentId} navigateTo={handleNavigate} />;
+    }
+    
+    if (currentPage.startsWith('fullConversation/')) {
+      const parts = currentPage.split('/');
+      const queryId = parts[1];
+      return <SearchRegulationsPage navigateTo={handleNavigate} initialQueryId={parseInt(queryId, 10)} showFullConversation={true} />;
+    }
+    
+    switch(currentPage) {
       case 'home':
-        return <HomePage navigateTo={navigateTo} />;
-      case 'login':
-        return <LoginPage navigateTo={navigateTo} />;
+        return <HomePage navigateTo={handleNavigate} />;
       case 'signup':
-        return <SignupPage onStateSelect={handleStateSelection} />;
+        return <SignupPage navigateTo={handleNavigate} />;
+      case 'login':
+        return <LoginPage navigateTo={handleNavigate} />;
       case 'operationType':
         return <OperationTypePage onOperationTypeSelect={handleOperationTypeSelection} />;
-      case 'manualUpload':
+      case 'documentViewer':
+      case 'document-viewer':
+        return <DocumentViewerPage isMinimumStandards={true} navigateTo={handleNavigate} />;
+      case 'dashboard':
+        return <Dashboard navigateTo={handleNavigate} preloadedDocuments={userDocuments} />;
+      case 'search':
+        return <SearchRegulationsPage navigateTo={handleNavigate} />;
+      case 'userSettings':
+        return <UserSettingsPage navigateTo={handleNavigate} />;
+      case 'allQueries':
+        return <AllQueriesPage navigateTo={handleNavigate} />;
+      case 'documentUpload':
         return (
           <ManualUploadPage 
-            operationType={operationType}
-            onUploadComplete={handleManualUploadComplete}
-            onSkip={handleManualUploadSkip}
-            onBack={() => navigateTo('operationType')}
+            operationType={operationType} 
+            onUploadComplete={() => handleNavigate('dashboard')} 
+            onBack={() => handleNavigate('dashboard')} 
+            onSkip={() => handleNavigate('dashboard')} 
+            navigateTo={handleNavigate}
           />
         );
-      case 'documentViewer':
-        return <DocumentViewerPage operationType={operationType} navigateTo={navigateTo} />;
-      case 'dashboard':
-        return <Dashboard navigateTo={navigateTo} />;
-      case 'search':
-        return <SearchRegulationsPage navigateTo={navigateTo} />;
       default:
-        return <HomePage navigateTo={navigateTo} />;
+        return <HomePage navigateTo={handleNavigate} />;
     }
   };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      <Header navigateTo={navigateTo} currentPage={currentPage} />
+      <Header navigateTo={handleNavigate} currentPage={currentPage} />
       <main className="flex-grow">
         {renderPage()}
       </main>
@@ -108,9 +157,11 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <ModelProvider>
+        <AppContent />
+      </ModelProvider>
     </AuthProvider>
   );
 }
 
-export default App;
+export default App; 

@@ -10,6 +10,12 @@ This is the backend API for the Encompliance.io compliance platform.
 - Local LLM integration
 - PDF document processing
 
+## Document Storage
+
+All documents (PDFs) are stored in the `encompliance-documents` directory at the root of the project. This location is hardcoded in the application settings and cannot be changed through environment variables.
+
+The document metadata (filename, upload date, etc.) is stored in the PostgreSQL database in the `pdfs` table, but the actual files are stored in the `encompliance-documents` directory with timestamped filenames to prevent collisions.
+
 ## Setup
 
 ### Prerequisites

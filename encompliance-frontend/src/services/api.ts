@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { logApiRequest } from '../debug';
 
 const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
@@ -8,7 +9,7 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
   withCredentials: false, // Using Bearer token authentication instead of cookies
-  timeout: 60000, // Increased timeout to 60 seconds for PDF processing
+  timeout: 60000, // Increased timeout for PDF processing
 });
 
 // Add request interceptor to include auth token in all requests
@@ -22,7 +23,9 @@ api.interceptors.request.use(
     }
     
     // Debug log (remove in production)
-    console.log(`API Request to ${config.url} with token: ${token ? 'Yes' : 'No'}`);
+    const url = config.url || '';
+    const method = config.method?.toUpperCase() || 'UNKNOWN';
+    logApiRequest(url, method, !!token);
     console.log(`Request headers:`, config.headers);
     
     return config;
@@ -38,11 +41,35 @@ api.interceptors.response.use(
   (response) => {
     // Debug log (remove in production)
     console.log(`API Response from ${response.config.url}: ${response.status}`);
+    
+    // Special handling for document list response
+    if (response.config.url?.includes('/documents/list')) {
+      console.log('Document list response received:', response.data);
+      
+      // Check if the documents array exists
+      if (!response.data?.documents) {
+        console.warn('Document list response missing documents array:', response.data);
+      } else if (response.data.documents.length === 0) {
+        console.warn('Document list returned empty array');
+      }
+    }
+    
     return response;
   },
   async (error) => {
-    // Debug log (remove in production)
+    // Debug log with full details for debugging purposes
     console.error(`API Error from ${error.config?.url}:`, error);
+    console.error('Full error details:', {
+      status: error.response?.status,
+      data: error.response?.data,
+      headers: error.response?.headers,
+      config: error.config
+    });
+    
+    // Special handling for document-related errors
+    if (error.config?.url?.includes('/documents/')) {
+      console.error('Document API error:', error.response?.data?.detail || error.message);
+    }
     
     const originalRequest = error.config;
     
@@ -52,6 +79,7 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       
       try {
+        console.log('Attempting to refresh token...');
         // Try to refresh the token
         const refreshResponse = await axios.post(`${baseURL}/refresh-token`, {}, {
           withCredentials: false,
@@ -63,19 +91,24 @@ api.interceptors.response.use(
         
         if (refreshResponse.data.access_token) {
           // Save the new token
-          localStorage.setItem('token', refreshResponse.data.access_token);
+          const newToken = refreshResponse.data.access_token;
+          localStorage.setItem('token', newToken);
+          console.log('Token refreshed successfully');
           
           // Update the Authorization header
-          originalRequest.headers.Authorization = `Bearer ${refreshResponse.data.access_token}`;
-          originalRequest.headers['x-token'] = refreshResponse.data.access_token;
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          originalRequest.headers['x-token'] = newToken;
           
           // Retry the original request
           return api(originalRequest);
         }
       } catch (refreshError) {
         // If refresh fails, clear the token and let the app handle redirection
-        localStorage.removeItem('token');
         console.error('Token refresh failed:', refreshError);
+        localStorage.removeItem('token');
+        
+        // Dispatch an event that auth components can listen for
+        window.dispatchEvent(new CustomEvent('auth-token-expired'));
       }
     }
     

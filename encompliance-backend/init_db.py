@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from app.models.user import User, Base
+from app.models.query_log import QueryLog
 from app.auth.utils import get_password_hash
 
 # Load environment variables

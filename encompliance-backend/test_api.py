@@ -9,7 +9,7 @@ async def test_chat_endpoint():
     payload = {
         "prompt": "What are the requirements for background checks?",
         "operation_type": "daycare",
-        "model": "demo"
+        "model": "local-model"
     }
     
     async with httpx.AsyncClient() as client:

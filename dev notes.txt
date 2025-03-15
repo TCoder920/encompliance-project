@@ -20,7 +20,7 @@ Error Handling: Improved error handling for file uploads using the ErrorMessage 
 State Management: Managed states for uploaded files, errors, and upload success to enhance user experience.
 UI Updates: Provided clear feedback for upload errors and success notifications, improving overall usability.
 6. Backend Integration for Chat Feature
-Model Compatibility: Updated the backend to ensure compatibility with LM Studio instead of Ollama, focusing on the specific requirements of LM Studio.
+Model Compatibility: Updated the backend to ensure compatibility with LM Studio, focusing on the specific requirements of LM Studio.
 API Adjustments: Modified the llm_service.py to handle the response format from LM Studio correctly, ensuring proper communication with the local LLM server.
 Environment Configuration: Updated the .env file to set the correct LOCAL_MODEL_URL for LM Studio, ensuring the backend can connect to the local model.
 7. Testing and Debugging
@@ -30,7 +30,7 @@ Analyzing terminal output for error messages indicating issues with the 'choices
 Identifying that the backend code was failing to handle the response format correctly and proposing necessary adjustments.
 Logging Enhancements: Added detailed logging to help diagnose issues with the LM Studio integration, capturing raw responses for better debugging.
 8. LM Studio Specific Adjustments
-Integration with LM Studio: Acknowledged the switch from Ollama to LM Studio, which required specific adjustments in the backend code to accommodate differences in API structure.
+Integration with LM Studio: Implemented specific adjustments in the backend code to accommodate LM Studio's API structure.
 Functionality Updates: Implemented new functions in llm_service.py to handle requests to the LM Studio API with the appropriate message format.
 Error Handling: Enhanced error handling to manage different response formats from LM Studio, including logging the raw response for debugging purposes.
 9. Final Configuration and Testing

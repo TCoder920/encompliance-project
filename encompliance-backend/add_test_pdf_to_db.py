@@ -3,7 +3,7 @@ import shutil
 import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.models.pdf import PDF
+from app.models.document import Document
 from app.models.user import User
 from app.core.config import get_settings
 from passlib.context import CryptContext
@@ -67,21 +67,26 @@ def add_test_pdf_to_db():
         dest_path = os.path.join(settings.PDF_STORAGE_PATH, unique_filename)
         shutil.copyfile(test_pdf_path, dest_path)
         
-        # Create a PDF record in the database
-        pdf = PDF(
+        # Get file size
+        file_size = os.path.getsize(dest_path)
+        
+        # Create a Document record in the database
+        document = Document(
             filename="test_compliance.pdf",
-            filepath=unique_filename,
+            filepath=os.path.join(settings.PDF_STORAGE_PATH, unique_filename),
+            file_type="PDF",
+            file_size=file_size,
             uploaded_by=test_user.id
         )
-        db.add(pdf)
+        db.add(document)
         db.commit()
-        db.refresh(pdf)
+        db.refresh(document)
         
-        print(f"Added test PDF to database with ID: {pdf.id}")
-        print(f"Filename: {pdf.filename}")
+        print(f"Added test PDF to database with ID: {document.id}")
+        print(f"Filename: {document.filename}")
         print(f"Stored at: {dest_path}")
         
-        return pdf.id
+        return document.id
     
     except Exception as e:
         print(f"Error adding test PDF to database: {str(e)}")
@@ -93,9 +98,9 @@ def add_test_pdf_to_db():
         db.close()
 
 if __name__ == "__main__":
-    pdf_id = add_test_pdf_to_db()
-    if pdf_id:
-        print(f"Test PDF added successfully with ID: {pdf_id}")
-        print(f"You can now use this PDF ID in the chat by including it in the pdf_ids parameter")
+    doc_id = add_test_pdf_to_db()
+    if doc_id:
+        print(f"Test PDF added successfully with ID: {doc_id}")
+        print(f"You can now use this document ID in the chat by including it in the document_ids parameter")
     else:
         print("Failed to add test PDF to database") 

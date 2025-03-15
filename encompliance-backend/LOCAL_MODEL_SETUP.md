@@ -6,32 +6,8 @@ This guide explains how to set up and use local LLM models with the Encompliance
 
 The backend is designed to work with the following local model servers:
 
-1. **Ollama** - A lightweight local LLM server (https://ollama.com/)
-2. **LM Studio** - A GUI for running local LLMs (https://lmstudio.ai/)
-3. **Any OpenAI API-compatible server** - Any server that implements the OpenAI API format
-
-## Setting Up Ollama
-
-1. **Install Ollama**:
-   - Download and install from https://ollama.com/
-
-2. **Pull a model**:
-   ```bash
-   ollama pull llama3
-   ```
-
-3. **Start the Ollama server**:
-   ```bash
-   ollama serve
-   ```
-
-4. **Configure Encompliance.io**:
-   - Edit the `.env` file in the `encompliance-backend` directory:
-     ```
-     USE_LOCAL_MODEL=true
-     LOCAL_MODEL_URL=http://localhost:11434/v1
-     LOCAL_MODEL_NAME=llama3
-     ```
+1. **LM Studio** - A GUI for running local LLMs (https://lmstudio.ai/)
+2. **Any OpenAI API-compatible server** - Any server that implements the OpenAI API format
 
 ## Setting Up LM Studio
 
@@ -48,10 +24,10 @@ The backend is designed to work with the following local model servers:
      ```
      USE_LOCAL_MODEL=true
      LOCAL_MODEL_URL=http://localhost:1234/v1
-     LOCAL_MODEL_NAME=your_model_name
+     LOCAL_MODEL_NAME=local-model
      ```
    - Replace `1234` with the port your LM Studio server is running on
-   - Replace `your_model_name` with the name of your model
+   - The `LOCAL_MODEL_NAME` should be set to "local-model"
 
 ## Using the Local Model
 
@@ -85,6 +61,6 @@ If you encounter issues with the local model:
 3. **Check the logs**:
    - Look for error messages in the backend server logs
 
-4. **Fallback behavior**:
-   - If the local model fails, the system will automatically fall back to the demo mode
-   - If you want to use OpenAI models as a fallback, set `USE_LOCAL_MODEL=false` and provide an OpenAI API key 
+4. **Alternative model setup**:
+   - If the local model service is unavailable, the system will use OpenAI if configured
+   - If you want to use OpenAI models, set `USE_LOCAL_MODEL=false` and provide an OpenAI API key 

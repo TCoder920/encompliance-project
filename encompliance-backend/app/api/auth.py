@@ -1,13 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Header
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from datetime import timedelta
+from datetime import timedelta, datetime
 from typing import Optional
 from app.database import get_db
 from app.models.user import User
 from app.schemas.user import UserCreate, Token, User as UserSchema, UserLogin
 from app.auth.utils import verify_password, get_password_hash, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 from app.auth.dependencies import get_current_user
+from app.services.document_service import assign_default_pdf_to_user
 
 router = APIRouter(tags=["Authentication"])
 
@@ -55,6 +56,9 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_user)
     
+    # Assign the Chapter 746 Centers PDF to the new user
+    await assign_default_pdf_to_user(db_user.id, db)
+    
     return db_user
 
 @router.post("/login", response_model=Token)
@@ -76,6 +80,10 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    
+    # Update last login time
+    user.last_login = datetime.now()
+    db.commit()
     
     # Create access token
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -101,6 +109,10 @@ async def login_with_email(login_data: UserLogin, db: Session = Depends(get_db))
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    
+    # Update last login time
+    user.last_login = datetime.now()
+    db.commit()
     
     # Create access token
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)

@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
-import { Shield, Home, LogIn } from 'lucide-react';
+import { Shield, Home, LogIn, User, Settings } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import UniversalModelSelector from './UniversalModelSelector';
 
 interface HeaderProps {
   navigateTo: (page: string) => void;
@@ -14,7 +15,7 @@ const Header: React.FC<HeaderProps> = ({ navigateTo, currentPage }) => {
   useEffect(() => {
     console.log("Header - Authentication state:", isAuthenticated);
   }, [isAuthenticated]);
-  
+
   return (
     <header className="bg-navy-blue text-white shadow-md">
       <div className="container mx-auto px-4 py-3">
@@ -24,7 +25,7 @@ const Header: React.FC<HeaderProps> = ({ navigateTo, currentPage }) => {
             <span className="text-xl font-bold font-times">Encompliance.io</span>
           </div>
           
-          <nav className="hidden md:flex space-x-6">
+          <nav className="hidden md:flex items-center space-x-6">
             <button 
               onClick={() => navigateTo('home')}
               className={`flex items-center space-x-1 ${currentPage === 'home' ? 'text-blue-300' : 'hover:text-blue-300'}`}
@@ -42,6 +43,16 @@ const Header: React.FC<HeaderProps> = ({ navigateTo, currentPage }) => {
                   <span>Dashboard</span>
                 </button>
                 <button 
+                  onClick={() => navigateTo('userSettings')}
+                  className={`flex items-center space-x-1 ${currentPage === 'userSettings' ? 'text-blue-300' : 'hover:text-blue-300'}`}
+                >
+                  <User className="h-5 w-5" />
+                  <span>User Profile</span>
+                </button>
+                <div className="ml-2 border-l border-gray-600 pl-2">
+                  <UniversalModelSelector />
+                </div>
+                <button 
                   onClick={() => {
                     logout();
                     navigateTo('home');
@@ -53,14 +64,14 @@ const Header: React.FC<HeaderProps> = ({ navigateTo, currentPage }) => {
               </>
             ) : (
               <>
-                <button 
+                <button
                   onClick={() => navigateTo('login')}
                   className="flex items-center space-x-1 text-white hover:text-blue-300"
                 >
                   <LogIn className="h-5 w-5" />
                   <span>Login</span>
                 </button>
-                <button 
+                <button
                   onClick={() => navigateTo('signup')}
                   className="bg-white text-navy-blue px-4 py-2 rounded font-bold hover:bg-blue-100 transition duration-200"
                 >

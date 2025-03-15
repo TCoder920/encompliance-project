@@ -5,61 +5,126 @@ export interface ChatMessage {
   content: string;
 }
 
-export interface AIResponse {
-  text: string;
-  error?: string;
-}
-
+/**
+ * Get a response from the AI.
+ */
 export const getAIResponse = async (
   prompt: string,
   operationType: string,
   messageHistory: any[] = [],
   model: string = 'local-model',
-  pdfIds?: number[]
-): Promise<AIResponse> => {
+  documentIds?: number[],
+): Promise<string> => {
+  console.log(`Sending AI request with model: ${model}`);
+  console.log(`Document IDs included: ${documentIds ? documentIds.join(', ') : 'none'}`);
+  
   try {
-    console.log(`Sending AI request with model: ${model}`);
-    console.log(`PDF IDs included: ${pdfIds ? pdfIds.join(', ') : 'none'}`);
+    // For local models, use streaming by default
+    const useStreaming = model === 'local-model' || !model.startsWith('gpt-');
     
     const response = await api.post('/chat', {
       prompt,
       operation_type: operationType,
       message_history: messageHistory,
       model,
-      pdf_ids: pdfIds
+      document_ids: documentIds,
+      stream: useStreaming // Enable streaming for local models
     });
     
-    return {
-      text: response.data.text,
-      error: response.data.error
-    };
+    if (response.data.error) {
+      throw new Error(response.data.error);
+    }
+    
+    return response.data.text;
   } catch (error) {
-    console.error('Error in AI service:', error);
+    console.error('Error getting AI response:', error);
     throw error;
   }
 };
 
-// Fallback function for when API is not available
-export function getFallbackResponse(prompt: string, operationType: string): AIResponse {
-  const lcPrompt = prompt.toLowerCase();
-  
-  if (lcPrompt.includes('ratio') && operationType === 'daycare') {
-    return {
-      text: "Per § 746.1601 and § 746.1609, the child-to-caregiver ratio for 2-year-olds is 11:1 when children are grouped by age. This means one caregiver may supervise up to 11 two-year-old children. If you have more than 11 two-year-olds, you'll need additional caregivers to maintain this ratio."
-    };
-  } else if (lcPrompt.includes('background check')) {
-    return {
-      text: "According to the standards, all employees, volunteers, and household members (for home-based operations) must undergo a background check before having contact with children in care. This includes a criminal history check, central registry check, and fingerprinting. These checks must be renewed periodically as specified in the minimum standards."
-    };
-  } else if (lcPrompt.includes('training') || lcPrompt.includes('hours')) {
-    return {
-      text: operationType === 'daycare' 
-        ? "Per § 746.1309, caregivers must complete a minimum of 24 clock hours of training annually. This training must include specific topics such as child development, guidance and discipline, age-appropriate activities, and health and safety."
-        : "According to § 748.930, caregivers in GROs must complete a minimum of 30 clock hours of training annually, including topics specific to the needs of children in care."
-    };
-  } else {
-    return {
-      text: "I'd be happy to help with your question. Could you provide more details about the specific compliance area you're inquiring about? I can provide information on ratios, background checks, training requirements, physical facilities, health practices, and other regulatory areas."
-    };
+/**
+ * Get a streaming response from the AI.
+ * This function returns a callback that receives chunks of text as they arrive.
+ */
+export const getStreamingAIResponse = (
+  prompt: string,
+  operationType: string,
+  messageHistory: any[] = [],
+  model: string = 'local-model',
+  onChunk: (chunk: string) => void,
+  onError: (error: string) => void,
+  onComplete: () => void,
+  documentIds?: number[],
+): () => void => {
+  console.log(`Sending streaming AI request with model: ${model}`);
+  console.log(`Document IDs included: ${documentIds ? documentIds.join(', ') : 'none'}`);
+
+  try {
+    // Create the request
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    // Make the API call
+    fetch(`${api.defaults.baseURL}/chat/stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({
+        prompt,
+        operation_type: operationType,
+        message_history: messageHistory,
+        model,
+        document_ids: documentIds,
+        stream: true // Explicitly set stream to true
+      }),
+      signal
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status} ${response.statusText}`);
+      }
+      
+      // Set up the streaming reader
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      
+      // Process the stream
+      const processStream = async () => {
+        if (!reader) return;
+        
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            
+            if (done) {
+              onComplete();
+              break;
+            }
+            
+            // Decode and process the chunk
+            const chunk = decoder.decode(value, { stream: true });
+            onChunk(chunk);
+          }
+        } catch (error) {
+          console.error('Error reading stream:', error);
+          onError(error instanceof Error ? error.message : 'Error reading response stream');
+        }
+      };
+      
+      processStream();
+    })
+    .catch(error => {
+      console.error('Error in streaming request:', error);
+      onError(error instanceof Error ? error.message : 'Unknown error in streaming request');
+    });
+    
+    // Return an abort function
+    return () => controller.abort();
+  } catch (error) {
+    console.error('Error setting up streaming:', error);
+    onError(error instanceof Error ? error.message : 'Unknown error setting up streaming request');
+    return () => {}; // Return empty function as fallback
   }
-}
+};

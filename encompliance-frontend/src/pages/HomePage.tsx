@@ -1,12 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { Shield, CheckCircle, AlertTriangle, Users, FileCheck, Clock, CheckSquare, AlertCircle, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Shield, CheckCircle, AlertTriangle, Users, FileCheck, Clock, CheckSquare, AlertCircle, ExternalLink, FileText, Search, User } from 'lucide-react';
 import ErrorMessage from '../components/ErrorMessage';
+import { useAuth } from '../contexts/AuthContext';
+import documentService from '../services/documentService';
 
 interface HomePageProps {
   navigateTo: (page: string) => void;
 }
 
 const HomePage: React.FC<HomePageProps> = ({ navigateTo }) => {
+  const { isAuthenticated, user } = useAuth();
   const [metrics, setMetrics] = useState({
     activeUsers: 2142,
     documentsAnalyzed: 8212,
@@ -213,16 +216,25 @@ const HomePage: React.FC<HomePageProps> = ({ navigateTo }) => {
           <Shield className="h-20 w-20 mx-auto mb-6" />
           <h1 className="text-4xl md:text-5xl font-bold font-times mb-6">Encompliance.io</h1>
           <p className="text-xl md:text-2xl mb-8">Texas Daycare and GRO Compliance Made Simple</p>
-          <button 
-            onClick={() => handleNavigation('signup')}
-            className="bg-white text-navy-blue px-8 py-3 rounded font-bold text-lg hover:bg-blue-100 transition duration-200"
-          >
-            Get Started
-          </button>
+          {isAuthenticated ? (
+            <button 
+              onClick={() => handleNavigation('dashboard')}
+              className="bg-white text-navy-blue px-8 py-3 rounded font-bold text-lg hover:bg-blue-100 transition duration-200"
+            >
+              Go to Dashboard
+            </button>
+          ) : (
+            <button 
+              onClick={() => handleNavigation('signup')}
+              className="bg-white text-navy-blue px-8 py-3 rounded font-bold text-lg hover:bg-blue-100 transition duration-200"
+            >
+              Get Started
+            </button>
+          )}
         </div>
       </section>
 
-      {/* Slogans Section */}
+      {/* Slogans Section - Show for all users */}
       <section className="w-full py-16 bg-white">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -253,70 +265,72 @@ const HomePage: React.FC<HomePageProps> = ({ navigateTo }) => {
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="w-full py-16 bg-gray-100">
-        <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center text-navy-blue mb-12 font-times">How It Works</h2>
-          
-          <div className="max-w-3xl mx-auto space-y-8">
-            <div className="flex items-start">
-              <div className="bg-navy-blue text-white rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0 mr-4">
-                <span className="font-bold">1</span>
+      {/* How It Works Section - Only show for non-authenticated users */}
+      {!isAuthenticated && (
+        <section className="w-full py-16 bg-gray-100">
+          <div className="container mx-auto px-4">
+            <h2 className="text-3xl font-bold text-center text-navy-blue mb-12 font-times">How It Works</h2>
+            
+            <div className="max-w-3xl mx-auto space-y-8">
+              <div className="flex items-start">
+                <div className="bg-navy-blue text-white rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0 mr-4">
+                  <span className="font-bold">1</span>
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-navy-blue mb-2">Create Your Account</h3>
+                  <p className="text-gray-700">Set up your account with basic information about your operation.</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-xl font-bold text-navy-blue mb-2">Create Your Account</h3>
-                <p className="text-gray-700">Set up your account with basic information about your operation.</p>
+              
+              <div className="flex items-start">
+                <div className="bg-navy-blue text-white rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0 mr-4">
+                  <span className="font-bold">2</span>
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-navy-blue mb-2">Choose Your Operation Type</h3>
+                  <p className="text-gray-700">Specify whether you operate a Daycare or GRO/RTC facility and upload your operational policy for AI-powered analysis and compliance verification.</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start">
+                <div className="bg-navy-blue text-white rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0 mr-4">
+                  <span className="font-bold">3</span>
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-navy-blue mb-2">Access Compliance Tools</h3>
+                  <p className="text-gray-700">View regulations, get expert AI guidance on compliance questions, and receive personalized recommendations based on your operational policies.</p>
+                </div>
               </div>
             </div>
             
-            <div className="flex items-start">
-              <div className="bg-navy-blue text-white rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0 mr-4">
-                <span className="font-bold">2</span>
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-navy-blue mb-2">Choose Your Operation Type</h3>
-                <p className="text-gray-700">Specify whether you operate a Daycare or GRO/RTC facility and upload your operational policy for AI-powered analysis and compliance verification.</p>
-              </div>
-            </div>
-            
-            <div className="flex items-start">
-              <div className="bg-navy-blue text-white rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0 mr-4">
-                <span className="font-bold">3</span>
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-navy-blue mb-2">Access Compliance Tools</h3>
-                <p className="text-gray-700">View regulations, get expert AI guidance on compliance questions, and receive personalized recommendations based on your operational policies.</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="text-center mt-12">
-            <button 
-              onClick={() => handleNavigation('signup')}
-              className="bg-navy-blue text-white px-8 py-3 rounded font-bold text-lg hover:bg-blue-800 transition duration-200 mb-8"
-            >
-              Sign Up Now
-            </button>
-
-            <div className="flex justify-center items-center">
-              <a 
-                href="https://www.hhs.texas.gov/providers/protective-services-providers/child-care-regulation" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center text-navy-blue hover:text-blue-800 transition duration-200"
+            <div className="text-center mt-12">
+              <button 
+                onClick={() => handleNavigation('signup')}
+                className="bg-navy-blue text-white px-8 py-3 rounded font-bold text-lg hover:bg-blue-800 transition duration-200 mb-8"
               >
-                <img 
-                  src="https://www.hhs.texas.gov/sites/default/files/styles/media_image/public/2022-01/texas-hhs-logo-color.png" 
-                  alt="Texas HHS" 
-                  className="h-8 w-auto mr-2"
-                />
-                <span className="font-semibold mr-1">Visit Texas HHS Child Care Regulation</span>
-                <ExternalLink className="h-4 w-4" />
-              </a>
+                Sign Up Now
+              </button>
+
+              <div className="flex justify-center items-center">
+                <a 
+                  href="https://www.hhs.texas.gov/providers/protective-services-providers/child-care-regulation" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center text-navy-blue hover:text-blue-800 transition duration-200"
+                >
+                  <img 
+                    src="https://www.hhs.texas.gov/sites/default/files/styles/media_image/public/2022-01/texas-hhs-logo-color.png" 
+                    alt="Texas HHS" 
+                    className="h-8 w-auto mr-2"
+                  />
+                  <span className="font-semibold mr-1">Visit Texas HHS Child Care Regulation</span>
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
     </div>
   );
 };

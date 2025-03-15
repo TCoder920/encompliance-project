@@ -32,6 +32,9 @@ def add_pdf_direct():
     dest_path = PDF_STORAGE_PATH / unique_filename
     shutil.copyfile(test_pdf_path, dest_path)
     
+    # Get file size
+    file_size = os.path.getsize(dest_path)
+    
     # Connect to the database
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -47,24 +50,24 @@ def add_pdf_direct():
         
         user_id = user_id_result[0]
         
-        # Insert the PDF record
+        # Insert the document record
         now = datetime.datetime.now().isoformat()
         cursor.execute(
-            "INSERT INTO pdfs (filename, filepath, uploaded_at, uploaded_by, is_deleted) VALUES (?, ?, ?, ?, ?)",
-            ("test_compliance.pdf", unique_filename, now, user_id, 0)
+            "INSERT INTO documents (filename, filepath, file_type, file_size, uploaded_at, uploaded_by, is_deleted) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            ("test_compliance.pdf", unique_filename, "PDF", file_size, now, user_id, 0)
         )
         
-        # Get the ID of the inserted PDF
-        pdf_id = cursor.lastrowid
+        # Get the ID of the inserted document
+        doc_id = cursor.lastrowid
         
         # Commit the transaction
         conn.commit()
         
-        print(f"Added test PDF to database with ID: {pdf_id}")
+        print(f"Added test PDF to database with ID: {doc_id}")
         print(f"Filename: test_compliance.pdf")
         print(f"Stored at: {dest_path}")
         
-        return pdf_id
+        return doc_id
     
     except Exception as e:
         print(f"Error adding test PDF to database: {str(e)}")
@@ -77,9 +80,9 @@ def add_pdf_direct():
         conn.close()
 
 if __name__ == "__main__":
-    pdf_id = add_pdf_direct()
-    if pdf_id:
-        print(f"Test PDF added successfully with ID: {pdf_id}")
-        print(f"You can now use this PDF ID in the chat by including it in the pdf_ids parameter")
+    doc_id = add_pdf_direct()
+    if doc_id:
+        print(f"Test PDF added successfully with ID: {doc_id}")
+        print(f"You can now use this document ID in the chat by including it in the document_ids parameter")
     else:
         print("Failed to add test PDF to database") 

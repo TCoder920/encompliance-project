@@ -52,6 +52,7 @@ class User(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: Optional[datetime] = None
+    last_login: Optional[datetime] = None
     subscription_status: str = "active"  # Default value
     subscription_end_date: Optional[str] = None
     

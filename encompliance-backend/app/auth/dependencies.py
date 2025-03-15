@@ -8,6 +8,7 @@ from app.models.user import User
 from app.schemas.user import TokenData
 from app.auth.utils import SECRET_KEY, ALGORITHM
 import logging
+from datetime import datetime
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -25,6 +26,11 @@ def get_token_from_request(
     # Log headers for debugging
     if request:
         logger.info(f"Request headers: {request.headers}")
+        # Check for token in query parameters
+        token_param = request.query_params.get('token')
+        if token_param:
+            logger.info("Token found in query parameters")
+            return token_param
     
     # Try to get token from OAuth2 scheme
     if token:
@@ -50,6 +56,9 @@ async def get_current_user(
     db: Session = Depends(get_db)
 ) -> Union[User, None]:
     """Get the current user from the JWT token."""
+    logger.info("--- BEGIN get_current_user ---")
+    logger.info(f"Token received: {token[:15] if token else 'None'}...")
+    
     if token is None:
         logger.warning("Authentication failed: No token provided")
         raise HTTPException(
@@ -66,8 +75,10 @@ async def get_current_user(
     
     try:
         # Decode the JWT token
-        logger.info(f"Attempting to decode token: {token[:10]}...")
+        logger.info(f"Attempting to decode token: {token[:15]}...")
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        logger.info(f"Token payload: {payload}")
+        
         username: str = payload.get("sub")
         
         if username is None:
@@ -76,6 +87,16 @@ async def get_current_user(
             
         token_data = TokenData(username=username)
         logger.info(f"Token decoded successfully for user: {username}")
+        
+        # Check token expiration
+        if 'exp' in payload:
+            expiry = datetime.utcfromtimestamp(payload['exp'])
+            now = datetime.utcnow()
+            logger.info(f"Token expiry: {expiry}, Current time: {now}, Time until expiry: {expiry - now}")
+            if now > expiry:
+                logger.warning(f"Token expired at {expiry}")
+                raise credentials_exception
+                
     except JWTError as e:
         logger.error(f"JWT decode error: {str(e)}")
         raise credentials_exception
@@ -84,10 +105,11 @@ async def get_current_user(
     user = db.query(User).filter(User.username == token_data.username).first()
     
     if user is None:
-        logger.warning(f"User not found: {token_data.username}")
+        logger.warning(f"User not found in database: {token_data.username}")
         raise credentials_exception
-        
-    logger.info(f"Authentication successful for user: {user.username}")
+    
+    logger.info(f"Found user: id={user.id}, username={user.username}, is_active={user.is_active}")
+    logger.info("--- END get_current_user ---")
     return user
 
 async def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:

@@ -1,15 +1,7 @@
-import api from './api';
+import documentService, { Document } from './documentService';
 
-export interface PDF {
-  id: number;
-  filename: string;
-  filepath: string;
-  uploaded_at: string;
-  uploaded_by: number;
-  is_deleted: boolean;
-  deleted_at: string | null;
-  deleted_by: number | null;
-}
+// Alias Document as PDF for backward compatibility
+export type PDF = Document;
 
 export interface PDFListResponse {
   pdfs: PDF[];
@@ -17,31 +9,47 @@ export interface PDFListResponse {
 
 class PDFService {
   async uploadPDF(file: File): Promise<PDF> {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const response = await api.post('/pdfs/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-
-    return response.data;
+    try {
+      console.log('PDFService: Uploading file via documentService:', file.name);
+      const result = await documentService.uploadDocument(file);
+      console.log('PDFService: Upload successful, document ID:', result.id);
+      return result;
+    } catch (err) {
+      console.error('PDFService: Error uploading file:', err);
+      throw err;
+    }
   }
 
   async listPDFs(): Promise<PDF[]> {
-    const response = await api.get<PDFListResponse>('/pdfs/list');
-    return response.data.pdfs;
+    try {
+      console.log('PDFService: Listing PDFs via documentService');
+      const documents = await documentService.listDocuments();
+      console.log(`PDFService: Found ${documents.length} documents`);
+      return documents;
+    } catch (err) {
+      console.error('PDFService: Error listing PDFs:', err);
+      return [];
+    }
   }
 
   async downloadPDF(pdfId: number): Promise<string> {
-    const response = await api.get<PDF>(`/pdfs/download/${pdfId}`);
-    return response.data.filepath;
+    try {
+      console.log(`PDFService: Downloading PDF ${pdfId} via documentService`);
+      return await documentService.downloadDocument(pdfId.toString());
+    } catch (err) {
+      console.error(`PDFService: Error downloading PDF ${pdfId}:`, err);
+      throw err;
+    }
   }
 
   async deletePDF(pdfId: number): Promise<PDF> {
-    const response = await api.delete<PDF>(`/pdfs/delete/${pdfId}`);
-    return response.data;
+    try {
+      console.log(`PDFService: Deleting PDF ${pdfId} via documentService`);
+      return await documentService.deleteDocument(pdfId);
+    } catch (err) {
+      console.error(`PDFService: Error deleting PDF ${pdfId}:`, err);
+      throw err;
+    }
   }
 }
 

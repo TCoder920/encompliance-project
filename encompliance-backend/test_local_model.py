@@ -1,6 +1,6 @@
 import asyncio
 import os
-from app.services.llm_service import call_local_model_api, get_fallback_response
+from app.services.llm_service import call_local_model_api, get_error_response
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -16,17 +16,17 @@ async def test_local_model():
     try:
         print("Testing local model API...")
         response = await call_local_model_api(
-            prompt=prompt,
-            operation_type=operation_type,
-            message_history=None,
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant specialized in childcare regulations."},
+                {"role": "user", "content": prompt}
+            ],
             model=settings.LOCAL_MODEL_NAME
         )
         print(f"Local model response: {response}")
     except Exception as e:
         print(f"Error calling local model API: {str(e)}")
-        print("Falling back to demo response...")
-        response = get_fallback_response(prompt, operation_type)
-        print(f"Fallback response: {response}")
+        error_response = get_error_response(str(e))
+        print(f"Error response: {error_response}")
 
 if __name__ == "__main__":
     asyncio.run(test_local_model()) 

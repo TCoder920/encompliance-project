@@ -62,12 +62,22 @@ async def get_query_logs(
         # Format the response
         logs = []
         for query in queries:
+            # Debug log to see what's in each query
+            print(f"Query log: id={query.id}, query={query.query[:30]}..., created_at={query.created_at}")
+            
             logs.append({
                 "id": query.id,
-                "query": query.query_text,
-                "timestamp": query.created_at.strftime("%b %d, %I:%M %p"),
-                "document": query.document_name
+                "query_text": query.query,
+                "response_text": query.response,
+                "created_at": query.created_at.isoformat(),
+                "document_reference": query.document_reference,
+                "conversation_id": query.conversation_id
             })
+        
+        # Debug log the final response
+        print(f"Returning {len(logs)} logs to client")
+        for log in logs:
+            print(f"  - Log: id={log['id']}, query={log['query_text'][:30]}..., created_at={log['created_at']}")
         
         return {"logs": logs}
     except Exception as e:
@@ -91,6 +101,8 @@ async def get_query_details(
     Get details for a specific query.
     """
     try:
+        print(f"Getting query details for ID: {query_id}, user: {current_user.id}")
+        
         # Get the query
         query = db.query(QueryLog).filter(
             QueryLog.id == query_id,
@@ -98,25 +110,36 @@ async def get_query_details(
         ).first()
         
         if not query:
+            print(f"Query with ID {query_id} not found for user {current_user.id}")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Query with ID {query_id} not found"
             )
         
+        print(f"Found query: id={query.id}, query={query.query[:30]}..., document_id={query.document_id}, conversation_id={query.conversation_id}")
+        
         # Format the response
-        return {
+        response_data = {
             "id": query.id,
-            "query": query.query_text,
-            "response": query.response_text,
-            "timestamp": query.created_at.isoformat(),
-            "document": query.document_name,
-            "full_conversation": query.conversation_id is not None
+            "query_text": query.query,
+            "response_text": query.response,
+            "created_at": query.created_at.isoformat(),
+            "document_reference": query.document_reference,
+            "conversation_id": query.conversation_id,
+            "full_conversation": query.conversation_id is not None,
+            "documentIds": [query.document_id] if query.document_id and query.document_id > 0 else []
         }
+        
+        print(f"Returning query details: {response_data}")
+        return response_data
     except HTTPException:
         raise
     except Exception as e:
         # Log the error
+        import traceback
+        error_traceback = traceback.format_exc()
         print(f"Error getting query details: {str(e)}")
+        print(f"Traceback: {error_traceback}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get query details: {str(e)}"

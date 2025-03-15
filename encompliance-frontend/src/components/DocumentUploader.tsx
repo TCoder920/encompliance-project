@@ -1,5 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Upload, FileText, X, Check, AlertCircle } from 'lucide-react';
+import * as documentLogger from '../utils/documentLogger';
+import pdfService from '../services/pdfService';
 
 interface DocumentUploaderProps {
   onUploadComplete?: (file: File) => void;
@@ -19,76 +21,105 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
   const [uploadComplete, setUploadComplete] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleDrag = (e: React.DragEvent) => {
+  const handleDrag = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     
     if (e.type === 'dragenter' || e.type === 'dragover') {
       setDragActive(true);
+      documentLogger.docLog('Document drag started', { type: e.type });
     } else if (e.type === 'dragleave') {
       setDragActive(false);
+      documentLogger.docLog('Document drag cancelled');
     }
   };
 
-  const validateFile = (file: File): boolean => {
-    // Check file size
-    if (file.size > maxSizeMB * 1024 * 1024) {
-      setError(`File size exceeds the ${maxSizeMB}MB limit.`);
-      return false;
-    }
-
-    // Check file type
+  const validateFile = (file: File): { valid: boolean; error?: string } => {
+    documentLogger.docLog('Validating file', { 
+      name: file.name, 
+      size: file.size, 
+      type: file.type 
+    });
+    
+    // Validate file type
     const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
     if (!allowedFileTypes.includes(fileExtension)) {
-      setError(`File type not supported. Please upload ${allowedFileTypes.join(', ')} files.`);
-      return false;
+      const error = `File type not allowed. Please upload ${allowedFileTypes.join(', ')} files.`;
+      documentLogger.docError('File validation failed: invalid file type', null, { 
+        fileExtension, 
+        allowedTypes: allowedFileTypes 
+      });
+      return { valid: false, error };
     }
-
-    return true;
+    
+    // Validate file size
+    const fileSize = file.size / 1024 / 1024; // Convert to MB
+    if (fileSize > maxSizeMB) {
+      const error = `File size exceeds ${maxSizeMB}MB limit.`;
+      documentLogger.docError('File validation failed: file too large', null, { 
+        fileSize: `${fileSize.toFixed(2)}MB`, 
+        maxSize: `${maxSizeMB}MB` 
+      });
+      return { valid: false, error };
+    }
+    
+    documentLogger.docSuccess('File validation passed', { name: file.name });
+    return { valid: true };
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    documentLogger.docLog('File dropped on uploader');
     setDragActive(false);
-    setError(null);
     
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const droppedFile = e.dataTransfer.files[0];
-      if (validateFile(droppedFile)) {
-        handleFile(droppedFile);
-      }
+      const file = e.dataTransfer.files[0];
+      documentLogger.docLog('Processing dropped file', { fileName: file.name });
+      handleFile(file);
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
-    setError(null);
     
     if (e.target.files && e.target.files[0]) {
-      const selectedFile = e.target.files[0];
-      if (validateFile(selectedFile)) {
-        handleFile(selectedFile);
-      }
+      const file = e.target.files[0];
+      documentLogger.docLog('File selected from file picker', { fileName: file.name });
+      handleFile(file);
     }
   };
 
-  const handleFile = (file: File) => {
+  const handleFile = async (file: File) => {
+    const validation = validateFile(file);
+    
+    if (!validation.valid) {
+      documentLogger.docError('File validation failed in handleFile', null, { error: validation.error });
+      setError(validation.error || 'File validation failed');
+      return;
+    }
+    
+    setError(null);
     setFile(file);
-    simulateUpload(file);
-  };
-
-  const simulateUpload = (file: File) => {
     setUploading(true);
     
-    // Simulate upload process
-    setTimeout(() => {
-      setUploading(false);
-      setUploadComplete(true);
+    try {
+      // Upload the file using pdfService
+      await pdfService.uploadPDF(file);
+      documentLogger.docLog('File ready for upload, calling onUploadComplete', { fileName: file.name });
       if (onUploadComplete) {
         onUploadComplete(file);
       }
-    }, 2000);
+      // Force refresh of document list after upload
+      await pdfService.listPDFs();
+      setUploadComplete(true);
+    } catch (error) {
+      documentLogger.docError('Error in onUploadComplete callback', error);
+      setError('An error occurred while processing the file.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleButtonClick = () => {

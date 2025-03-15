@@ -8,9 +8,10 @@ interface ManualUploadPageProps {
   onUploadComplete: () => void;
   onBack: () => void;
   onSkip: () => void;
+  navigateTo?: (page: string) => void;
 }
 
-const ManualUploadPage: React.FC<ManualUploadPageProps> = ({ operationType, onUploadComplete, onBack, onSkip }) => {
+const ManualUploadPage: React.FC<ManualUploadPageProps> = ({ operationType, onUploadComplete, onBack, onSkip, navigateTo }) => {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +44,11 @@ const ManualUploadPage: React.FC<ManualUploadPageProps> = ({ operationType, onUp
 
   const handleSkip = () => {
     try {
-      onSkip();
+      if(navigateTo) {
+        navigateTo('dashboard');
+      } else {
+        onSkip();
+      }
     } catch (err) {
       console.error('Skip error:', err);
       setError('Failed to skip this step. Please try again.');

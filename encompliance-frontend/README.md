@@ -9,9 +9,15 @@ This application provides an AI-powered compliance assistant for Texas daycare a
 - Document upload functionality for custom compliance documents
 - User dashboard for tracking compliance activities
 
+## Document Storage
+
+All documents (PDFs) uploaded through the application are stored in the `encompliance-documents` directory at the root of the project. The frontend communicates with the backend API to upload, retrieve, and manage these documents.
+
+Document metadata (filename, upload date, etc.) is stored in the PostgreSQL database, but the actual files are stored in the `encompliance-documents` directory with timestamped filenames to prevent collisions.
+
 ## AI Integration
 
-The application supports integration with real AI models through the OpenAI API. To enable this feature:
+The application integrates with AI models through the OpenAI API. To enable this feature:
 
 1. Create a `.env` file in the root directory (copy from `.env.example`)
 2. Add your OpenAI API key:
@@ -19,15 +25,12 @@ The application supports integration with real AI models through the OpenAI API.
    VITE_OPENAI_API_KEY=your_openai_api_key_here
    ```
 
-Without an API key, the application will run in "Demo Mode" with pre-programmed responses.
-
 ## Available AI Models
 
 The application supports multiple AI models:
 
-- **Llama 3 8B**: Efficient model suitable for fast responses to general compliance questions  
+- **Local LLM**: A locally hosted model running on http://127.0.0.1:1234 for fast responses to compliance questions
 - **GPT-4o-mini**: Compact and capable model optimized for complex compliance questions
-- **Demo Mode**: Pre-programmed responses (no API key required)
 
 ## Development
 
@@ -40,4 +43,4 @@ npm run dev
 
 ## Security Note
 
-In a production environment, API calls to OpenAI should be proxied through a backend service to protect your API key. The current implementation with `dangerouslyAllowBrowser: true` is for demonstration purposes only.
+In a production environment, API calls to OpenAI should be proxied through a backend service to protect your API key.

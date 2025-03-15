@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.future import select
 from app.models.user import User
-from app.models.pdf import PDF
+from app.models.document import Document
 from app.core.config import get_settings
 from app.auth.utils import get_password_hash
 from reportlab.pdfgen import canvas
@@ -119,21 +119,26 @@ async def add_test_pdf_to_db():
             with open(dest_path, "wb") as f:
                 f.write(pdf_content)
             
-            # Create a PDF record in the database
-            pdf = PDF(
+            # Get file size
+            file_size = os.path.getsize(dest_path)
+            
+            # Create a Document record in the database
+            document = Document(
                 filename="test_compliance.pdf",
                 filepath=unique_filename,
+                file_type="PDF",
+                file_size=file_size,
                 uploaded_by=test_user.id
             )
-            session.add(pdf)
+            session.add(document)
             await session.commit()
-            await session.refresh(pdf)
+            await session.refresh(document)
             
-            print(f"Added test PDF with ID: {pdf.id}")
-            print(f"Filename: {pdf.filename}")
+            print(f"Added test PDF with ID: {document.id}")
+            print(f"Filename: {document.filename}")
             print(f"Stored at: {dest_path}")
             
-            return pdf.id
+            return document.id
         
         except Exception as e:
             print(f"Error adding test PDF: {str(e)}")
@@ -144,10 +149,10 @@ async def add_test_pdf_to_db():
 
 async def main():
     """Main function"""
-    pdf_id = await add_test_pdf_to_db()
-    if pdf_id:
-        print(f"Test PDF added successfully with ID: {pdf_id}")
-        print(f"You can now use this PDF ID in the chat by including it in the pdf_ids parameter")
+    doc_id = await add_test_pdf_to_db()
+    if doc_id:
+        print(f"Test PDF added successfully with ID: {doc_id}")
+        print(f"You can now use this document ID in the chat by including it in the document_ids parameter")
     else:
         print("Failed to add test PDF to database")
 

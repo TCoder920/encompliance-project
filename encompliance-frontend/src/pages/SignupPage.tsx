@@ -5,10 +5,11 @@ import { SignupData } from '../services/authService';
 import ErrorMessage from '../components/ErrorMessage';
 
 interface SignupPageProps {
-  onStateSelect: (state: string) => void;
+  onStateSelect?: (state: string) => void;
+  navigateTo?: (page: string) => void;
 }
 
-const SignupPage: React.FC<SignupPageProps> = ({ onStateSelect }) => {
+const SignupPage: React.FC<SignupPageProps> = ({ onStateSelect, navigateTo }) => {
   const { signup, error: authError, clearError } = useAuth();
   const [step, setStep] = useState(1);
   const [selectedState, setSelectedState] = useState('');
@@ -63,14 +64,17 @@ const SignupPage: React.FC<SignupPageProps> = ({ onStateSelect }) => {
     if (authError) clearError();
   };
   
-  const handleContinue = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
     if (!selectedState) {
-      setLocalError("Please select a state to continue");
+      setLocalError('Please select a state to continue');
       return;
     }
     
     try {
       setIsSubmitting(true);
+      clearError();
       setLocalError(null);
       
       const signupData: SignupData = {
@@ -79,25 +83,52 @@ const SignupPage: React.FC<SignupPageProps> = ({ onStateSelect }) => {
         full_name: formData.fullName,
         operation_name: formData.operationName,
         phone_number: formData.phoneNumber,
-        state: selectedState
+        state: selectedState,
+        operation_type: 'daycare' // Default to daycare, will be updated in next step
       };
+      
+      console.log('Submitting signup data:', JSON.stringify(signupData));
       
       await signup(signupData);
       
       // Only continue with the flow if there was no error
-      // Check for authError before proceeding
+      // The signup function in AuthContext handles token storage
+      // We'll check for authError before proceeding
       if (!authError) {
-        // Continue with the flow
-        onStateSelect(selectedState);
+        console.log('Signup success, navigating to dashboard...');
+        
+        // Force access to the minimum standards PDF by making a request to load it
+        try {
+          // Make request to view the PDF to ensure it's loaded for the user
+          const response = await fetch(`${import.meta.env.VITE_API_URL}/documents/view/childcare-746-centers`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+          });
+          
+          if (response.ok) {
+            console.log('Successfully accessed Minimum Standards PDF');
+          } else {
+            console.warn('Failed to access Minimum Standards PDF:', response.status);
+          }
+        } catch (pdfErr) {
+          console.error('Error accessing Minimum Standards PDF:', pdfErr);
+        }
+        
+        // Redirect to dashboard instead of operation type selection
+        if (navigateTo) {
+          navigateTo('dashboard');
+        }
       } else {
         console.error('Auth error after signup:', authError);
       }
     } catch (err) {
-      // Handle any errors not caught by AuthContext
       console.error('Signup error:', err);
-      // Set a user-friendly error message
-      if (!authError && !localError) {
-        setLocalError("There was a problem creating your account. Please try again.");
+      
+      if (err instanceof Error) {
+        setLocalError(`Error: ${err.message}`);
+      } else {
+        setLocalError('An unexpected error occurred during signup. Please try again.');
       }
     } finally {
       setIsSubmitting(false);
@@ -290,7 +321,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ onStateSelect }) => {
                 Back
               </button>
               <button
-                onClick={handleContinue}
+                onClick={handleSubmit}
                 disabled={!selectedState || isSubmitting}
                 className={`flex-1 py-2 px-4 rounded ${
                   selectedState && !isSubmitting

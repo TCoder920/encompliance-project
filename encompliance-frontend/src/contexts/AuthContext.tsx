@@ -109,7 +109,8 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
             subscription_status: 'active',
             is_active: true,
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
+            last_login: new Date().toISOString()
           });
           
           console.log("Authentication successful, using minimal user data");
@@ -142,6 +143,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
       try {
         const userData = await userService.getCurrentUser();
         setUser(userData);
+        console.log("User profile loaded successfully after signup");
       } catch (profileErr) {
         console.log('Profile fetch error, but signup was successful:', profileErr);
         // Create a minimal user object from the signup data
@@ -156,9 +158,10 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
           subscription_status: 'active',
           is_active: true,
           created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          last_login: new Date().toISOString()
         });
-        // Don't show error to user since signup succeeded
+        console.log("Using minimal user data after signup");
       }
     } catch (err) {
       handleError(err, 'Signup failed. Please try again or contact support.');
