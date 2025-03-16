@@ -60,6 +60,8 @@ const AIChat: React.FC<AIChatProps> = ({
   const typewriterQueueRef = useRef<{text: string, messageId: number} | null>(null);
   const isTypingRef = useRef(false);
   const abortStreamingRef = useRef<(() => void) | null>(null);
+  const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
+  const [showCursorCloud, setShowCursorCloud] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -279,6 +281,20 @@ const AIChat: React.FC<AIChatProps> = ({
     }
   };
 
+  // Track mouse movement
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isProcessing && !isTypingRef.current) {
+        setCursorPosition({ x: e.clientX, y: e.clientY });
+      }
+    };
+    
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, [isProcessing]);
+
   const handleSendMessage = async () => {
     if (inputValue.trim() === '' || isProcessing) return;
     
@@ -309,6 +325,7 @@ const AIChat: React.FC<AIChatProps> = ({
     
     setMessages(prevMessages => [...prevMessages, loadingMessage]);
     setIsProcessing(true);
+    setShowCursorCloud(true);
     
     try {
       // Ensure document IDs are valid numbers
@@ -347,7 +364,11 @@ const AIChat: React.FC<AIChatProps> = ({
           )
         );
         
+        // Hide the cursor cloud when streaming starts
+        setShowCursorCloud(false);
+        
         let fullResponse = '';
+        let responseStarted = false;
         
         // Set up the streaming response handler
         const abortStreaming = getStreamingAIResponse(
@@ -358,17 +379,50 @@ const AIChat: React.FC<AIChatProps> = ({
           (chunk) => {
             // Update the message with each chunk
             fullResponse += chunk;
-            setMessages(prevMessages => 
-              prevMessages.map(msg => 
-                msg.id === aiMessageId
-                  ? {
-                      ...msg,
-                      text: fullResponse,
-                      isStreaming: true
-                    }
-                  : msg
-              )
-            );
+            
+            // If this is the first chunk with actual content, mark response as started
+            if (!responseStarted && chunk.trim() !== '') {
+              responseStarted = true;
+              
+              // Update the message to remove the streaming indicator only when we have content
+              setMessages(prevMessages => 
+                prevMessages.map(msg => 
+                  msg.id === aiMessageId
+                    ? {
+                        ...msg,
+                        text: fullResponse,
+                        isStreaming: false
+                      }
+                    : msg
+                )
+              );
+            } else if (responseStarted) {
+              // Regular update without streaming indicator once we've started
+              setMessages(prevMessages => 
+                prevMessages.map(msg => 
+                  msg.id === aiMessageId
+                    ? {
+                        ...msg,
+                        text: fullResponse,
+                        isStreaming: false
+                      }
+                    : msg
+                )
+              );
+            } else {
+              // Keep the streaming indicator until we get actual content
+              setMessages(prevMessages => 
+                prevMessages.map(msg => 
+                  msg.id === aiMessageId
+                    ? {
+                        ...msg,
+                        text: fullResponse,
+                        isStreaming: true
+                      }
+                    : msg
+                )
+              );
+            }
             
             // Scroll to bottom as new content arrives
             scrollToBottom();
@@ -430,17 +484,28 @@ const AIChat: React.FC<AIChatProps> = ({
           validDocumentIds
         );
         
-        // Queue the AI response for typewriter effect
-        typewriterQueueRef.current = {
-          text: response,
-          messageId: aiMessageId
-        };
+        // Hide the cursor cloud when response is received
+        setShowCursorCloud(false);
         
-        // Start processing the typewriter queue
-        processTypewriterQueue();
+        // Update the message with the response (no streaming indicator)
+        setMessages(prevMessages => 
+          prevMessages.map(msg => 
+            msg.id === aiMessageId
+              ? {
+                  ...msg,
+                  text: response,
+                  isLoading: false,
+                  isStreaming: false
+                }
+              : msg
+          )
+        );
         
         // Save the chat history
         await saveChatHistory(userMessage.text, response);
+        
+        // Mark processing as complete
+        setIsProcessing(false);
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'An unknown error occurred');
@@ -459,6 +524,7 @@ const AIChat: React.FC<AIChatProps> = ({
       );
       
       setIsProcessing(false);
+      setShowCursorCloud(false);
     }
   };
   
@@ -467,6 +533,34 @@ const AIChat: React.FC<AIChatProps> = ({
       e.preventDefault();
       handleSendMessage();
     }
+  };
+  
+  const handleStopResponse = () => {
+    // Stop streaming if active
+    if (abortStreamingRef.current) {
+      abortStreamingRef.current();
+      abortStreamingRef.current = null;
+    }
+    
+    // Stop typewriter effect if active
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+      isTypingRef.current = false;
+    }
+    
+    // Update all streaming messages to non-streaming
+    setMessages(prevMessages => 
+      prevMessages.map(msg => 
+        msg.isStreaming 
+          ? { ...msg, isStreaming: false }
+          : msg
+      )
+    );
+    
+    // Reset processing state
+    setIsProcessing(false);
+    setShowCursorCloud(false);
   };
   
   // Clean up on unmount
@@ -496,7 +590,19 @@ const AIChat: React.FC<AIChatProps> = ({
         </div>
       )}
       
-      <div className="flex-grow overflow-auto p-4">
+      {/* Cursor-following morphing cloud */}
+      {showCursorCloud && (
+        <div 
+          className="fixed pointer-events-none z-50 w-8 h-8 bg-gradient-to-r from-blue-400 to-purple-500 dark:from-blue-500 dark:to-purple-600 animate-morphing-cloud animate-pulse-glow"
+          style={{ 
+            left: `${cursorPosition.x}px`, 
+            top: `${cursorPosition.y}px`,
+            transform: 'translate(-50%, -50%)'
+          }}
+        />
+      )}
+      
+      <div className="flex-grow overflow-auto p-4 bg-gray-50 dark:bg-gray-800 transition-colors duration-300">
         {messages.map((message) => (
           <div 
             key={message.id} 
@@ -505,13 +611,13 @@ const AIChat: React.FC<AIChatProps> = ({
             <div 
               className={`inline-block max-w-[85%] rounded-lg px-4 py-2 ${
                 message.sender === 'user' 
-                  ? 'bg-navy-blue text-white' 
-                  : 'bg-gray-100 text-gray-800'
-              }`}
+                  ? 'bg-navy-blue text-white dark:bg-blue-700' 
+                  : 'bg-white dark:bg-dark-surface text-gray-800 dark:text-gray-200 shadow-sm'
+              } transition-colors duration-300`}
             >
               {message.isLoading ? (
                 <div className="flex items-center justify-center py-2">
-                  <Loader2 className="h-5 w-5 animate-spin text-gray-500" />
+                  <Loader2 className="h-5 w-5 animate-spin text-gray-500 dark:text-gray-400" />
                 </div>
               ) : message.sender === 'ai' ? (
                 <div className="text-sm markdown-content">
@@ -519,19 +625,29 @@ const AIChat: React.FC<AIChatProps> = ({
                     {message.text}
                   </ReactMarkdown>
                   {message.isStreaming && (
-                    <span className="inline-block w-2 h-4 ml-1 bg-gray-500 animate-pulse"></span>
+                    <span className="inline-flex ml-2 align-middle relative h-3 w-3">
+                      <span className="absolute inset-0 w-3 h-3 bg-blue-500/40 dark:bg-blue-400/40 rounded-full animate-water-ripple"></span>
+                      <span className="absolute inset-0 w-3 h-3 bg-blue-500/30 dark:bg-blue-400/30 rounded-full animate-water-ripple-delay"></span>
+                      <span className="absolute inset-0 w-3 h-3 bg-blue-500/20 dark:bg-blue-400/20 rounded-full animate-water-ripple-delay2"></span>
+                      <span className="absolute inset-0 w-3 h-3 bg-blue-500 dark:bg-blue-400 rounded-full animate-water-pulse"></span>
+                    </span>
                   )}
                 </div>
               ) : (
                 <p className="text-sm whitespace-pre-wrap">
                   {message.text}
                   {message.isStreaming && (
-                    <span className="inline-block w-2 h-4 ml-1 bg-gray-500 animate-pulse"></span>
+                    <span className="inline-flex ml-2 align-middle relative h-3 w-3">
+                      <span className="absolute inset-0 w-3 h-3 bg-blue-500/40 dark:bg-blue-400/40 rounded-full animate-water-ripple"></span>
+                      <span className="absolute inset-0 w-3 h-3 bg-blue-500/30 dark:bg-blue-400/30 rounded-full animate-water-ripple-delay"></span>
+                      <span className="absolute inset-0 w-3 h-3 bg-blue-500/20 dark:bg-blue-400/20 rounded-full animate-water-ripple-delay2"></span>
+                      <span className="absolute inset-0 w-3 h-3 bg-blue-500 dark:bg-blue-400 rounded-full animate-water-pulse"></span>
+                    </span>
                   )}
                 </p>
               )}
             </div>
-            <div className="text-xs text-gray-500 mt-1">
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 transition-colors duration-300">
               {formatDateTime(message.timestamp)}
             </div>
           </div>
@@ -539,34 +655,42 @@ const AIChat: React.FC<AIChatProps> = ({
         <div ref={messagesEndRef} />
       </div>
       
-      <div className="border-t border-gray-200 p-3">
+      <div className="border-t border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-dark-surface transition-colors duration-300">
         <div className="flex items-center">
           <textarea
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="Ask a compliance question..."
-            className="flex-grow border border-gray-300 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-navy-blue resize-none text-left"
+            className="flex-grow border border-gray-300 dark:border-gray-600 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-navy-blue dark:focus:ring-blue-500 resize-none text-left bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 transition-colors duration-300"
             rows={2}
             disabled={isProcessing}
           />
-          <button 
-            onClick={handleSendMessage}
-            disabled={inputValue.trim() === '' || isProcessing}
-            className={`ml-2 p-2 rounded-full ${
-              inputValue.trim() === '' || isProcessing
-                ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-                : 'bg-navy-blue text-white hover:bg-blue-800'
-            }`}
-          >
-            {isProcessing ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
+          {isProcessing ? (
+            <button 
+              onClick={handleStopResponse}
+              className="ml-2 p-2 rounded-full bg-red-500 text-white hover:bg-red-600"
+              title="Stop response"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="6" y="6" width="12" height="12" />
+              </svg>
+            </button>
+          ) : (
+            <button 
+              onClick={handleSendMessage}
+              disabled={inputValue.trim() === ''}
+              className={`ml-2 p-2 rounded-full ${
+                inputValue.trim() === ''
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+                  : 'bg-navy-blue text-white hover:bg-blue-800'
+              }`}
+            >
               <Send className="h-5 w-5" />
-            )}
-          </button>
+            </button>
+          )}
         </div>
-        <div className="mt-2 text-xs text-gray-500 flex justify-end">
+        <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex justify-end items-center transition-colors duration-300">
           <span>
             Using: {selectedModel === 'local-model' ? 'Local LLM' : 'GPT-4o-mini'}
           </span>

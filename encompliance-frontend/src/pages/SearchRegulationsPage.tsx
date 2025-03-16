@@ -173,7 +173,7 @@ const SearchRegulationsPage: React.FC<SearchRegulationsPageProps> = ({
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-navy-blue mb-6 font-times">Search Regulations</h1>
+      <h1 className="text-3xl font-bold text-navy-blue dark:text-white mb-6 font-times transition-colors duration-300">Regulations Chat</h1>
       
       {error && (
         <ErrorMessage 
@@ -187,48 +187,50 @@ const SearchRegulationsPage: React.FC<SearchRegulationsPageProps> = ({
         <div>
           <button 
             onClick={handleBackToSearch}
-            className="bg-navy-blue text-white py-2 px-4 rounded mb-4"
+            className="bg-navy-blue text-white dark:bg-blue-600 py-2 px-4 rounded mb-4 hover:bg-blue-800 dark:hover:bg-blue-700 transition duration-300"
           >
-            ← Back to Search
+            ← Back to Chat
           </button>
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-bold text-navy-blue mb-4">{selectedPDF.filename}</h2>
-            <iframe 
-              src={`${selectedPDF.filepath}#toolbar=0&navpanes=0`}
-              className="w-full h-[800px] border-0"
-              title={selectedPDF.filename}
-            />
+          <div className="bg-white dark:bg-dark-surface p-6 rounded-lg shadow-md transition-colors duration-300">
+            <h2 className="text-xl font-bold text-navy-blue dark:text-white mb-4 transition-colors duration-300">{selectedPDF.filename}</h2>
+            <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded-lg transition-colors duration-300">
+              <iframe 
+                src={`${selectedPDF.filepath}#toolbar=0&navpanes=0`}
+                className="w-full h-[800px] border-0 rounded"
+                title={selectedPDF.filename}
+              />
+            </div>
           </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="md:col-span-1">
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-xl font-bold text-navy-blue mb-4">Available Documents</h2>
+            <div className="bg-white dark:bg-dark-surface p-6 rounded-lg shadow-md transition-colors duration-300">
+              <h2 className="text-xl font-bold text-navy-blue dark:text-white mb-4 transition-colors duration-300">Reference Documents</h2>
               
               {isLoading ? (
                 <div className="text-center py-8">
-                  <div className="animate-spin h-8 w-8 border-4 border-navy-blue border-t-transparent rounded-full mx-auto mb-4"></div>
-                  <p className="text-gray-600">Loading documents...</p>
+                  <div className="animate-spin h-8 w-8 border-4 border-navy-blue dark:border-blue-400 border-t-transparent rounded-full mx-auto mb-4 transition-colors duration-300"></div>
+                  <p className="text-gray-600 dark:text-gray-300 transition-colors duration-300">Loading documents...</p>
                 </div>
               ) : sortedPDFs.length === 0 ? (
-                <div className="text-center py-8 border border-dashed border-gray-300 rounded-lg">
-                  <FileText className="h-12 w-12 mx-auto text-gray-400 mb-3" />
-                  <p className="text-gray-600 mb-2">No documents found</p>
+                <div className="text-center py-8 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg transition-colors duration-300">
+                  <FileText className="h-12 w-12 mx-auto text-gray-400 dark:text-gray-500 mb-3 transition-colors duration-300" />
+                  <p className="text-gray-600 dark:text-gray-300 mb-2 transition-colors duration-300">No documents found</p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
                   {sortedPDFs.map((pdf) => (
                     <div 
                       key={pdf.id} 
-                      className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+                      className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors duration-300"
                       onClick={() => handlePDFClick(pdf)}
                     >
                       <div className="flex items-center">
-                        <FileText className="h-6 w-6 text-navy-blue mr-3" />
+                        <FileText className="h-6 w-6 text-navy-blue dark:text-blue-400 mr-3 transition-colors duration-300" />
                         <div>
-                          <p className="font-medium">{pdf.filename}</p>
-                          <p className="text-sm text-gray-500">
+                          <p className="font-medium text-gray-800 dark:text-gray-200 transition-colors duration-300">{pdf.filename}</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400 transition-colors duration-300">
                             Click to view
                           </p>
                         </div>
@@ -241,13 +243,13 @@ const SearchRegulationsPage: React.FC<SearchRegulationsPageProps> = ({
           </div>
           
           <div className="md:col-span-2">
-            <div className="bg-white p-6 rounded-lg shadow-md h-full">
-              <h2 className="text-xl font-bold text-navy-blue mb-4">
-                {initialQueryId ? 'Full Conversation' : 'Ask About Regulations'}
+            <div className="bg-white dark:bg-dark-surface p-6 rounded-lg shadow-md h-full transition-colors duration-300">
+              <h2 className="text-xl font-bold text-navy-blue dark:text-white mb-4 transition-colors duration-300">
+                {initialQueryId ? 'Full Conversation' : 'Chat Area'}
               </h2>
-              <div className="h-[600px]">
+              <div className="h-[600px] rounded-lg overflow-hidden transition-colors duration-300 border border-gray-200 dark:border-gray-700">
                 {initialQueryData && (
-                  <div className="mb-2 text-sm text-gray-500">
+                  <div className="text-sm text-gray-500 dark:text-gray-400 p-3 bg-blue-50 dark:bg-blue-900/20 border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
                     Viewing full conversation for query: "{initialQueryData.query_text || 'Unknown query'}"
                   </div>
                 )}

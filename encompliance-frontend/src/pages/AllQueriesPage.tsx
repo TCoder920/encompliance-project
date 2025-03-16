@@ -130,47 +130,47 @@ const AllQueriesPage: React.FC<AllQueriesPageProps> = ({ navigateTo }) => {
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold text-navy-blue mb-6">All Conversations</h1>
-      
-      <div className="flex justify-between items-center mb-4">
-        <div>
-          {queryLogs.length > 0 && (
-            <button
-              onClick={handleDeleteAllQueries}
-              className="px-3 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200 flex items-center"
-            >
-              <Trash2 className="h-4 w-4 mr-1" />
-              Delete All Conversations
-            </button>
-          )}
-        </div>
-        <div className="text-sm text-gray-600">
-          Showing {queryLogs.length} of {totalLogs} logs
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold text-navy-blue dark:text-white transition-colors duration-300">All Conversations</h1>
+        
+        <div className="flex space-x-4">
+          <button
+            onClick={handleDeleteAllQueries}
+            disabled={loading || queryLogs.length === 0}
+            className={`px-4 py-2 rounded flex items-center ${
+              loading || queryLogs.length === 0
+                ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                : 'bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800'
+            } transition-colors duration-300`}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete All
+          </button>
         </div>
       </div>
       
       {loading ? (
         <div className="text-center py-8">
-          <div className="animate-spin h-8 w-8 border-4 border-navy-blue border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading conversations...</p>
+          <div className="animate-spin h-8 w-8 border-4 border-navy-blue dark:border-blue-500 border-t-transparent rounded-full mx-auto mb-4 transition-colors duration-300"></div>
+          <p className="text-gray-600 dark:text-gray-300 transition-colors duration-300">Loading conversations...</p>
         </div>
       ) : error ? (
         <ErrorMessage message={error} type="error" onClose={() => setError('')} />
       ) : (
         <>
           {queryLogs.length === 0 ? (
-            <div className="text-center py-8 border border-dashed border-gray-300 rounded-lg">
-              <MessageSquare className="h-12 w-12 mx-auto text-gray-400 mb-3" />
-              <p className="text-gray-600 mb-2">No conversations found</p>
+            <div className="text-center py-8 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg transition-colors duration-300">
+              <MessageSquare className="h-12 w-12 mx-auto text-gray-400 dark:text-gray-500 transition-colors duration-300 mb-3" />
+              <p className="text-gray-600 dark:text-gray-300 transition-colors duration-300 mb-2">No conversations found</p>
             </div>
           ) : (
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <ul className="divide-y divide-gray-200">
+            <div className="bg-white dark:bg-dark-surface rounded-lg shadow-md p-6 transition-colors duration-300">
+              <ul className="divide-y divide-gray-200 dark:divide-gray-700 transition-colors duration-300">
                 {queryLogs.map((query) => (
                   <li key={query.id} className="py-4">
                     <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center text-xs text-gray-500">
+                      <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 transition-colors duration-300">
                         <Clock className="h-3 w-3 mr-1" />
                         <span>{formatRelativeTime(query.created_at || '')}</span>
                         {query.conversation_id && (
@@ -179,20 +179,20 @@ const AllQueriesPage: React.FC<AllQueriesPageProps> = ({ navigateTo }) => {
                       </div>
                       <button
                         onClick={() => handleDeleteQuery(query.id)}
-                        className="text-gray-400 hover:text-red-500"
+                        className="text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors duration-300"
                         title="Delete conversation"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
-                    <p className="font-medium mb-2">{query.query_text}</p>
+                    <p className="font-medium mb-2 text-gray-800 dark:text-gray-200 transition-colors duration-300">{query.query_text}</p>
                     {query.document_reference && (
-                      <p className="text-xs text-gray-500 mb-2">Document: {query.document_reference}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 transition-colors duration-300 mb-2">Document: {query.document_reference}</p>
                     )}
                     <div className="flex space-x-3">
                       <button
                         onClick={() => navigateTo(`fullConversation/${query.id}`)}
-                        className="text-sm text-navy-blue hover:text-blue-700 flex items-center"
+                        className="text-sm text-navy-blue dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center transition-colors duration-300"
                       >
                         <MessageSquare className="h-4 w-4 mr-1" />
                         View Full Conversation
@@ -211,26 +211,26 @@ const AllQueriesPage: React.FC<AllQueriesPageProps> = ({ navigateTo }) => {
                 <button
                   onClick={() => handlePageChange(page - 1)}
                   disabled={page === 1}
-                  className={`p-2 rounded ${
+                  className={`p-2 rounded transition-colors duration-300 ${
                     page === 1 
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed' 
+                      : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-500'
                   }`}
                 >
                   <ChevronLeft className="h-5 w-5" />
                 </button>
                 
-                <div className="text-sm">
+                <div className="text-sm text-gray-700 dark:text-gray-300 transition-colors duration-300">
                   Page {page} of {totalPages}
                 </div>
                 
                 <button
                   onClick={() => handlePageChange(page + 1)}
                   disabled={page === totalPages}
-                  className={`p-2 rounded ${
+                  className={`p-2 rounded transition-colors duration-300 ${
                     page === totalPages 
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed' 
+                      : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-500'
                   }`}
                 >
                   <ChevronRight className="h-5 w-5" />
@@ -240,7 +240,7 @@ const AllQueriesPage: React.FC<AllQueriesPageProps> = ({ navigateTo }) => {
               {/* Manual page selection - only show if there are 3 or more pages */}
               {totalPages >= 3 && (
                 <form onSubmit={handleManualPageChange} className="flex items-center space-x-2">
-                  <label htmlFor="pageNumber" className="text-sm text-gray-600">Go to page:</label>
+                  <label htmlFor="pageNumber" className="text-sm text-gray-600 dark:text-gray-400 transition-colors duration-300">Go to page:</label>
                   <input
                     id="pageNumber"
                     type="number"
@@ -248,11 +248,11 @@ const AllQueriesPage: React.FC<AllQueriesPageProps> = ({ navigateTo }) => {
                     max={totalPages}
                     value={manualPage}
                     onChange={(e) => setManualPage(e.target.value)}
-                    className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
+                    className="w-16 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 transition-colors duration-300"
                   />
                   <button
                     type="submit"
-                    className="px-3 py-1 bg-navy-blue text-white rounded text-sm hover:bg-blue-700"
+                    className="px-3 py-1 bg-navy-blue dark:bg-blue-600 text-white rounded text-sm hover:bg-blue-700 dark:hover:bg-blue-700 transition-colors duration-300"
                   >
                     Go
                   </button>
@@ -265,7 +265,7 @@ const AllQueriesPage: React.FC<AllQueriesPageProps> = ({ navigateTo }) => {
       
       <button
         onClick={() => navigateTo('dashboard')}
-        className="mt-6 px-4 py-2 bg-navy-blue text-white rounded hover:bg-blue-700"
+        className="mt-6 px-4 py-2 bg-navy-blue dark:bg-blue-600 text-white rounded hover:bg-blue-700 dark:hover:bg-blue-700 transition-colors duration-300"
       >
         Back to Dashboard
       </button>

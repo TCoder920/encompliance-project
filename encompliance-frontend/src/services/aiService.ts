@@ -143,7 +143,7 @@ export const deleteQuery = async (queryId: number): Promise<{ success: boolean }
  */
 export const deleteAllQueries = async (): Promise<{ success: boolean; count: number }> => {
   try {
-    const response = await api.delete('/query-logs/all');
+    const response = await api.delete('/queries/all');
     return response.data;
   } catch (error) {
     throw new Error('Failed to delete all queries');

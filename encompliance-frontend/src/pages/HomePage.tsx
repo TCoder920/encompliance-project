@@ -18,7 +18,6 @@ const HomePage: React.FC<HomePageProps> = ({ navigateTo }) => {
     inspectionsPassed: 656
   });
 
-  const [tickerPosition, setTickerPosition] = useState(0);
   const [showTicker, setShowTicker] = useState(true);
   const [startAnimation, setStartAnimation] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,31 +52,6 @@ const HomePage: React.FC<HomePageProps> = ({ navigateTo }) => {
     } catch (err) {
       console.error('Error updating metrics:', err);
       setError('Unable to update metrics data. Please refresh the page.');
-    }
-  }, [startAnimation]);
-
-  // Ticker animation
-  useEffect(() => {
-    if (!startAnimation) return;
-
-    try {
-      const tickerWidth = 200; // Width of each metric item
-      const totalWidth = tickerWidth * 5; // Total width of all metrics (5 items)
-      
-      const animate = () => {
-        setTickerPosition(prev => {
-          const newPosition = prev + 1; // Move right to left
-          // Reset position when we've scrolled the width of one complete set
-          return newPosition >= tickerWidth * 5 ? 0 : newPosition;
-        });
-      };
-
-      const animation = setInterval(animate, 30); // Slightly slower for better visibility
-      return () => clearInterval(animation);
-    } catch (err) {
-      console.error('Error in ticker animation:', err);
-      setError('Display issue detected. Please refresh the page.');
-      setShowTicker(false);
     }
   }, [startAnimation]);
 
@@ -144,59 +118,67 @@ const HomePage: React.FC<HomePageProps> = ({ navigateTo }) => {
             <p className="text-navy-blue dark:text-white">Loading metrics...</p>
           </div>
         ) : (
-          <div className="flex whitespace-nowrap" style={{ transform: `translateX(-${tickerPosition}px)` }}>
-            <div className="inline-flex space-x-16 animate-scroll">
-              <div className="flex items-center space-x-2 text-navy-blue dark:text-white">
+          <div className="relative overflow-hidden w-full">
+            <div className="animate-marquee inline-flex whitespace-nowrap absolute">
+              <div className="flex items-center space-x-2 text-navy-blue dark:text-white mx-8">
                 <Users className="h-5 w-5" />
                 <span className="font-semibold">{metrics.activeUsers.toLocaleString()}</span>
                 <span>Active Users</span>
               </div>
-              <div className="flex items-center space-x-2 text-navy-blue dark:text-white">
+              <div className="flex items-center space-x-2 text-navy-blue dark:text-white mx-8">
                 <FileText className="h-5 w-5" />
                 <span className="font-semibold">{metrics.documentsAnalyzed.toLocaleString()}</span>
                 <span>Documents Analyzed</span>
               </div>
-              <div className="flex items-center space-x-2 text-navy-blue dark:text-white">
+              <div className="flex items-center space-x-2 text-navy-blue dark:text-white mx-8">
                 <Search className="h-5 w-5" />
                 <span className="font-semibold">{metrics.complianceQueries.toLocaleString()}</span>
                 <span>Compliance Queries</span>
               </div>
-              <div className="flex items-center space-x-2 text-navy-blue dark:text-white">
+              <div className="flex items-center space-x-2 text-navy-blue dark:text-white mx-8">
                 <AlertCircle className="h-5 w-5" />
                 <span className="font-semibold">{metrics.enforcementActions.toLocaleString()}</span>
                 <span>Enforcement Actions Avoided</span>
               </div>
-              <div className="flex items-center space-x-2 text-navy-blue dark:text-white">
+              <div className="flex items-center space-x-2 text-navy-blue dark:text-white mx-8">
                 <CheckSquare className="h-5 w-5" />
                 <span className="font-semibold">{metrics.inspectionsPassed.toLocaleString()}</span>
                 <span>Inspections Passed</span>
               </div>
-              
-              {/* Duplicate for continuous scrolling */}
-              <div className="flex items-center space-x-2 text-navy-blue dark:text-white">
+            </div>
+            <div className="animate-marquee2 inline-flex whitespace-nowrap absolute">
+              <div className="flex items-center space-x-2 text-navy-blue dark:text-white mx-8">
                 <Users className="h-5 w-5" />
                 <span className="font-semibold">{metrics.activeUsers.toLocaleString()}</span>
                 <span>Active Users</span>
               </div>
-              <div className="flex items-center space-x-2 text-navy-blue dark:text-white">
+              <div className="flex items-center space-x-2 text-navy-blue dark:text-white mx-8">
                 <FileText className="h-5 w-5" />
                 <span className="font-semibold">{metrics.documentsAnalyzed.toLocaleString()}</span>
                 <span>Documents Analyzed</span>
               </div>
-              <div className="flex items-center space-x-2 text-navy-blue dark:text-white">
+              <div className="flex items-center space-x-2 text-navy-blue dark:text-white mx-8">
                 <Search className="h-5 w-5" />
                 <span className="font-semibold">{metrics.complianceQueries.toLocaleString()}</span>
                 <span>Compliance Queries</span>
               </div>
-              <div className="flex items-center space-x-2 text-navy-blue dark:text-white">
+              <div className="flex items-center space-x-2 text-navy-blue dark:text-white mx-8">
                 <AlertCircle className="h-5 w-5" />
                 <span className="font-semibold">{metrics.enforcementActions.toLocaleString()}</span>
                 <span>Enforcement Actions Avoided</span>
               </div>
-              <div className="flex items-center space-x-2 text-navy-blue dark:text-white">
+              <div className="flex items-center space-x-2 text-navy-blue dark:text-white mx-8">
                 <CheckSquare className="h-5 w-5" />
                 <span className="font-semibold">{metrics.inspectionsPassed.toLocaleString()}</span>
                 <span>Inspections Passed</span>
+              </div>
+            </div>
+            {/* Add an invisible spacer to ensure proper height */}
+            <div className="invisible inline-flex whitespace-nowrap">
+              <div className="flex items-center space-x-2 mx-8">
+                <span className="h-5 w-5" />
+                <span className="font-semibold">Spacer</span>
+                <span>Spacer</span>
               </div>
             </div>
           </div>
