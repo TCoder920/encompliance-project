@@ -106,7 +106,7 @@ const UserSettingsPage: React.FC<UserSettingsPageProps> = ({ navigateTo }) => {
   
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-navy-blue mb-6 font-times">User Settings</h1>
+      <h1 className="text-3xl font-bold text-navy-blue dark:text-white mb-6 font-times">User Settings</h1>
       
       {localError && (
         <ErrorMessage 
@@ -125,27 +125,27 @@ const UserSettingsPage: React.FC<UserSettingsPageProps> = ({ navigateTo }) => {
       )}
       
       {successMessage && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-6 flex items-start">
+        <div className="bg-green-50 dark:bg-green-900 border border-green-200 dark:border-green-700 text-green-700 dark:text-green-200 px-4 py-3 rounded mb-6 flex items-start">
           <div className="flex-shrink-0 mr-2">
-            <AlertCircle className="h-5 w-5 text-green-500" />
+            <AlertCircle className="h-5 w-5 text-green-500 dark:text-green-400" />
           </div>
           <div className="flex-grow">
             <p>{successMessage}</p>
           </div>
           <button 
             onClick={() => setSuccessMessage(null)}
-            className="flex-shrink-0 ml-2 text-green-500 hover:text-green-700"
+            className="flex-shrink-0 ml-2 text-green-500 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300"
           >
             &times;
           </button>
         </div>
       )}
       
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="bg-white dark:bg-dark-surface rounded-lg shadow-md p-6">
         <form onSubmit={handleSubmit}>
           <div className="space-y-6">
             <div>
-              <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+              <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <User className="h-5 w-5 text-gray-400" />
@@ -156,14 +156,14 @@ const UserSettingsPage: React.FC<UserSettingsPageProps> = ({ navigateTo }) => {
                   name="fullName"
                   value={formData.fullName}
                   onChange={handleInputChange}
-                  className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:ring-navy-blue focus:border-navy-blue border p-2"
+                  className="pl-10 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:ring-navy-blue focus:border-navy-blue dark:focus:ring-blue-500 dark:focus:border-blue-500 border p-2 dark:bg-gray-700 dark:text-white"
                   placeholder="John Doe"
                 />
               </div>
             </div>
             
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Mail className="h-5 w-5 text-gray-400" />
@@ -174,15 +174,15 @@ const UserSettingsPage: React.FC<UserSettingsPageProps> = ({ navigateTo }) => {
                   name="email"
                   value={formData.email}
                   disabled
-                  className="pl-10 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm border p-2 cursor-not-allowed"
+                  className="pl-10 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 shadow-sm border p-2 cursor-not-allowed dark:text-gray-400"
                   placeholder="john@example.com"
                 />
-                <p className="mt-1 text-xs text-gray-500">Email cannot be changed</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Email cannot be changed</p>
               </div>
             </div>
             
             <div>
-              <label htmlFor="operationName" className="block text-sm font-medium text-gray-700 mb-1">Operation Name</label>
+              <label htmlFor="operationName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Operation Name</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <User className="h-5 w-5 text-gray-400" />
@@ -193,14 +193,14 @@ const UserSettingsPage: React.FC<UserSettingsPageProps> = ({ navigateTo }) => {
                   name="operationName"
                   value={formData.operationName}
                   onChange={handleInputChange}
-                  className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:ring-navy-blue focus:border-navy-blue border p-2"
+                  className="pl-10 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:ring-navy-blue focus:border-navy-blue dark:focus:ring-blue-500 dark:focus:border-blue-500 border p-2 dark:bg-gray-700 dark:text-white"
                   placeholder="Sunshine Daycare"
                 />
               </div>
             </div>
             
             <div>
-              <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+              <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Phone className="h-5 w-5 text-gray-400" />
@@ -211,7 +211,7 @@ const UserSettingsPage: React.FC<UserSettingsPageProps> = ({ navigateTo }) => {
                   name="phoneNumber"
                   value={formData.phoneNumber}
                   onChange={handleInputChange}
-                  className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:ring-navy-blue focus:border-navy-blue border p-2"
+                  className="pl-10 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:ring-navy-blue focus:border-navy-blue dark:focus:ring-blue-500 dark:focus:border-blue-500 border p-2 dark:bg-gray-700 dark:text-white"
                   placeholder="(123) 456-7890"
                 />
               </div>
@@ -221,7 +221,7 @@ const UserSettingsPage: React.FC<UserSettingsPageProps> = ({ navigateTo }) => {
               <button
                 type="button"
                 onClick={() => navigateTo('changePassword')}
-                className="inline-flex items-center text-navy-blue hover:text-blue-700"
+                className="inline-flex items-center text-navy-blue dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
               >
                 <Lock className="h-4 w-4 mr-1" />
                 Change Password
@@ -232,7 +232,7 @@ const UserSettingsPage: React.FC<UserSettingsPageProps> = ({ navigateTo }) => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className={`w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-navy-blue hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-navy-blue ${
+                className={`w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-navy-blue dark:bg-blue-700 hover:bg-blue-800 dark:hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-navy-blue dark:focus:ring-blue-500 ${
                   isLoading ? 'opacity-70 cursor-not-allowed' : ''
                 }`}
               >
@@ -253,9 +253,9 @@ const UserSettingsPage: React.FC<UserSettingsPageProps> = ({ navigateTo }) => {
               </button>
             </div>
             
-            <div className="pt-8 border-t border-gray-200 mt-8">
-              <h3 className="text-lg font-medium text-red-600">Danger Zone</h3>
-              <p className="mt-1 text-sm text-gray-500">
+            <div className="pt-8 border-t border-gray-200 dark:border-gray-700 mt-8">
+              <h3 className="text-lg font-medium text-red-600 dark:text-red-400">Danger Zone</h3>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 Once you delete your account, all of your data will be permanently removed.
                 This action cannot be undone.
               </p>
@@ -270,8 +270,8 @@ const UserSettingsPage: React.FC<UserSettingsPageProps> = ({ navigateTo }) => {
                   Delete Account
                 </button>
               ) : (
-                <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md">
-                  <p className="text-sm text-red-700 font-medium">
+                <div className="mt-4 p-4 bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 rounded-md">
+                  <p className="text-sm text-red-700 dark:text-red-300 font-medium">
                     Are you sure you want to delete your account? This will remove all your data and cannot be undone.
                   </p>
                   <div className="mt-3 flex space-x-3">
@@ -289,7 +289,7 @@ const UserSettingsPage: React.FC<UserSettingsPageProps> = ({ navigateTo }) => {
                       type="button"
                       onClick={cancelDelete}
                       disabled={isDeleting}
-                      className="flex items-center justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-navy-blue"
+                      className="flex items-center justify-center py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-navy-blue dark:focus:ring-blue-500"
                     >
                       Cancel
                     </button>

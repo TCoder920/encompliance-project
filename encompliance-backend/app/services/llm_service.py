@@ -1,7 +1,8 @@
 import httpx
 import json
+import os
 from typing import List, Optional, Dict, Any, AsyncGenerator
-from app.core.config import get_settings
+from app.core.config import get_settings, SYSTEM_PROMPT
 from app.core.chat_utils import (
     enhance_system_message_with_pdf_context, 
     format_chat_history, 
@@ -12,6 +13,40 @@ from sqlalchemy.orm import Session
 
 settings = get_settings()
 
+def detect_provider(api_key: str, provider: Optional[str] = None) -> str:
+    """
+    Determine the LLM provider based on the API key format or manual selection.
+    
+    Args:
+        api_key: The API key to analyze
+        provider: Manually selected provider (if any)
+        
+    Returns:
+        The detected provider name: 'openai', 'anthropic', 'google', 'other', or 'unknown'
+    """
+    # If provider is manually selected, use that
+    if provider and provider.lower() in ['openai', 'anthropic', 'google', 'other']:
+        return provider.lower()
+    
+    # Auto-detect based on API key format
+    if not api_key:
+        return 'unknown'
+    
+    # OpenAI keys typically start with 'sk-'
+    if api_key.startswith('sk-'):
+        return 'openai'
+    
+    # Anthropic (Claude) keys typically start with 'claude-' or 'sk-ant-'
+    if api_key.startswith('claude-') or api_key.startswith('sk-ant-'):
+        return 'anthropic'
+    
+    # Google Gemini keys typically contain 'gemini' or start with 'google-'
+    if 'gemini' in api_key or api_key.startswith('google-'):
+        return 'google'
+    
+    # If no match, return unknown
+    return 'unknown'
+
 async def get_llm_response(
     prompt: str,
     operation_type: str,
@@ -21,7 +56,8 @@ async def get_llm_response(
     document_context: Optional[str] = None,
     db: Optional[Session] = None,
     current_user_id: Optional[int] = None,
-    stream: bool = False
+    stream: bool = False,
+    provider: Optional[str] = None
 ) -> str | AsyncGenerator[str, None]:
     """
     Get a response from an LLM based on the selected model.
@@ -31,11 +67,12 @@ async def get_llm_response(
         operation_type: The type of operation (daycare, residential, etc.)
         message_history: Previous messages in the conversation
         document_ids: IDs of documents to reference
-        model: The LLM model to use (defaults to settings.DEFAULT_MODEL)
+        model: The LLM model to use ('local-model' or 'cloud-model')
         document_context: Text extracted from documents (optional - will be retrieved if document_ids provided)
         db: Database session (required if document_ids provided)
         current_user_id: ID of the current user (for document access control)
         stream: Whether to stream the response
+        provider: Optional provider override (auto, openai, anthropic, google, other)
         
     Returns:
         The LLM's response as a string or an async generator of response chunks if streaming
@@ -104,13 +141,14 @@ async def get_llm_response(
     messages.append({"role": "user", "content": modified_prompt})
     
     try:
-        # Call the appropriate API based on the model
+        # Simplified model selection logic - just local or cloud
         if model == "local-model" or settings.USE_LOCAL_MODEL:
+            # Use local model
+            print(f"Using local model at {settings.LOCAL_MODEL_URL}")
             if stream:
-                # For streaming, we need to create and return an async generator
                 async def stream_local_response():
                     try:
-                        async_gen = call_lmstudio_api_streaming(messages, model)
+                        async_gen = call_lmstudio_api_streaming(messages, settings.LOCAL_MODEL_NAME)
                         async for chunk in async_gen:
                             yield chunk
                     except Exception as e:
@@ -121,30 +159,59 @@ async def get_llm_response(
                 
                 return stream_local_response()
             else:
-                return await call_local_model_api(messages, model)
-        elif model.startswith("gpt-"):
-            if stream:
-                return call_openai_api_streaming(messages, model)
-            else:
-                return await call_openai_api(messages, model)
-        else:
-            print(f"Unknown model: {model}, falling back to local model")
-            if stream:
-                # For streaming, we need to create and return an async generator
-                async def stream_fallback_response():
-                    try:
-                        async_gen = call_lmstudio_api_streaming(messages, settings.LOCAL_MODEL_NAME)
-                        async for chunk in async_gen:
-                            yield chunk
-                    except Exception as e:
-                        print(f"Error in stream_fallback_response: {str(e)}")
-                        import traceback
-                        print(f"Traceback: {traceback.format_exc()}")
-                        yield f"[Error: {str(e)}]"
-                
-                return stream_fallback_response()
-            else:
                 return await call_local_model_api(messages, settings.LOCAL_MODEL_NAME)
+        else:
+            # Use cloud model based on provider
+            detected_provider = None
+            
+            # If provider is specified and not "auto", use that
+            if provider and provider != "auto":
+                detected_provider = provider
+            else:
+                # Auto-detect based on available API keys
+                if os.environ.get("OPENAI_API_KEY"):
+                    detected_provider = "openai"
+                elif os.environ.get("ANTHROPIC_API_KEY"):
+                    detected_provider = "anthropic"
+                elif os.environ.get("GOOGLE_API_KEY"):
+                    detected_provider = "google"
+                elif os.environ.get("OTHER_API_KEY"):
+                    detected_provider = "other"
+            
+            # Use the detected provider
+            if detected_provider == "openai":
+                print(f"Using OpenAI cloud model")
+                if stream:
+                    return call_openai_api_streaming(messages, "gpt-4o-mini")  # Default to GPT-4o-mini
+                else:
+                    return await call_openai_api(messages, "gpt-4o-mini")
+            elif detected_provider == "anthropic":
+                print(f"Using Anthropic cloud model")
+                if stream:
+                    # Anthropic streaming not implemented yet
+                    raise NotImplementedError("Anthropic Claude API streaming is not yet implemented")
+                else:
+                    # Call Anthropic API (not implemented yet)
+                    raise NotImplementedError("Anthropic Claude API integration is not yet implemented")
+            elif detected_provider == "google":
+                print(f"Using Google cloud model")
+                if stream:
+                    return call_google_gemini_api_streaming(messages, "gemini-pro")
+                else:
+                    return await call_google_gemini_api(messages, "gemini-pro")
+            elif detected_provider == "other":
+                print(f"Using custom API provider")
+                # For custom providers, we'll use the OpenAI-compatible API format
+                # This assumes the custom provider follows the OpenAI API format
+                if stream:
+                    return call_custom_api_streaming(messages, "default")
+                else:
+                    return await call_custom_api(messages, "default")
+            else:
+                # No provider detected
+                error_msg = "No API key found for any cloud provider. Please add an API key in settings."
+                print(error_msg)
+                return error_msg
     except Exception as e:
         print(f"Error calling LLM API: {str(e)}")
         import traceback
@@ -780,6 +847,205 @@ async def call_direct_completion_api_streaming(
         print(f"Traceback: {traceback.format_exc()}")
         yield f"[Error: {error_msg}]"
 
+async def call_google_gemini_api(
+    messages: List[Dict[str, str]],
+    model: str = "gemini-pro"
+) -> str:
+    """
+    Call the Google Gemini API to get a response.
+    
+    Args:
+        messages: Formatted message history including system, user, and assistant messages
+        model: The Google Gemini model to use
+        
+    Returns:
+        The LLM's response as a string
+    """
+    if not os.environ.get("GOOGLE_API_KEY"):
+        raise ValueError("Google API key is not set. Please set the GOOGLE_API_KEY environment variable.")
+    
+    try:
+        # Convert messages to Gemini format
+        # Gemini doesn't support system messages directly, so we'll prepend it to the first user message
+        gemini_messages = []
+        system_content = None
+        
+        for msg in messages:
+            if msg["role"] == "system":
+                system_content = msg["content"]
+            elif msg["role"] == "user":
+                if system_content:
+                    # Prepend system message to the first user message
+                    gemini_messages.append({
+                        "role": "user",
+                        "parts": [{"text": f"System instructions: {system_content}\n\nUser message: {msg['content']}"}]
+                    })
+                    system_content = None  # Clear after using
+                else:
+                    gemini_messages.append({
+                        "role": "user",
+                        "parts": [{"text": msg["content"]}]
+                    })
+            elif msg["role"] == "assistant":
+                gemini_messages.append({
+                    "role": "model",
+                    "parts": [{"text": msg["content"]}]
+                })
+        
+        # Ensure we have the correct model name
+        if not model.startswith("gemini-"):
+            model = "gemini-pro"  # Default to gemini-pro if not specified
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                f"https://generativelanguage.googleapis.com/v1/models/{model}:generateContent",
+                headers={
+                    "Content-Type": "application/json",
+                    "x-goog-api-key": os.environ.get("GOOGLE_API_KEY")
+                },
+                json={
+                    "contents": gemini_messages,
+                    "generationConfig": {
+                        "temperature": 0.7,
+                        "maxOutputTokens": 1000,
+                    }
+                }
+            )
+            
+            if response.status_code != 200:
+                error_detail = response.json().get("error", {}).get("message", "Unknown error")
+                raise Exception(f"Google Gemini API error: {error_detail}")
+                
+            result = response.json()
+            
+            # Extract the response text from the Gemini API response
+            if "candidates" in result and len(result["candidates"]) > 0:
+                candidate = result["candidates"][0]
+                if "content" in candidate and "parts" in candidate["content"]:
+                    parts = candidate["content"]["parts"]
+                    if len(parts) > 0 and "text" in parts[0]:
+                        return parts[0]["text"]
+            
+            raise Exception("Failed to parse response from Google Gemini API")
+    except httpx.RequestError as e:
+        raise Exception(f"Error communicating with Google Gemini API: {str(e)}")
+
+async def call_google_gemini_api_streaming(
+    messages: List[Dict[str, str]],
+    model: str = "gemini-pro"
+) -> AsyncGenerator[str, None]:
+    """
+    Call the Google Gemini API with streaming enabled to get chunks of the response as they're generated.
+    
+    Args:
+        messages: Formatted message history including system, user, and assistant messages
+        model: The Google Gemini model to use
+        
+    Yields:
+        Chunks of the LLM's response as they become available
+    """
+    if not os.environ.get("GOOGLE_API_KEY"):
+        raise ValueError("Google API key is not set. Please set the GOOGLE_API_KEY environment variable.")
+    
+    try:
+        # Convert messages to Gemini format
+        # Gemini doesn't support system messages directly, so we'll prepend it to the first user message
+        gemini_messages = []
+        system_content = None
+        
+        for msg in messages:
+            if msg["role"] == "system":
+                system_content = msg["content"]
+            elif msg["role"] == "user":
+                if system_content:
+                    # Prepend system message to the first user message
+                    gemini_messages.append({
+                        "role": "user",
+                        "parts": [{"text": f"System instructions: {system_content}\n\nUser message: {msg['content']}"}]
+                    })
+                    system_content = None  # Clear after using
+                else:
+                    gemini_messages.append({
+                        "role": "user",
+                        "parts": [{"text": msg["content"]}]
+                    })
+            elif msg["role"] == "assistant":
+                gemini_messages.append({
+                    "role": "model",
+                    "parts": [{"text": msg["content"]}]
+                })
+        
+        # Ensure we have the correct model name
+        if not model.startswith("gemini-"):
+            model = "gemini-pro"  # Default to gemini-pro if not specified
+        
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            async with client.stream(
+                "POST",
+                f"https://generativelanguage.googleapis.com/v1/models/{model}:streamGenerateContent",
+                headers={
+                    "Content-Type": "application/json",
+                    "x-goog-api-key": os.environ.get("GOOGLE_API_KEY")
+                },
+                json={
+                    "contents": gemini_messages,
+                    "generationConfig": {
+                        "temperature": 0.7,
+                        "maxOutputTokens": 1000,
+                    }
+                },
+                timeout=60.0
+            ) as response:
+                if response.status_code != 200:
+                    # Try to parse error details if available
+                    try:
+                        error_text = await response.text()
+                        try:
+                            error_data = json.loads(error_text)
+                            error_detail = error_data.get("error", {}).get("message", "Unknown error")
+                        except json.JSONDecodeError:
+                            error_detail = error_text
+                    except:
+                        error_detail = f"HTTP Error {response.status_code}"
+                    
+                    error_msg = f"Google Gemini API error: {error_detail}"
+                    print(error_msg)
+                    yield f"[Error: {error_msg}]"
+                    return
+                
+                # Process streaming response
+                buffer = ""
+                async for chunk in response.aiter_bytes():
+                    if not chunk:
+                        continue
+                    
+                    try:
+                        # Decode the chunk
+                        chunk_text = chunk.decode('utf-8')
+                        
+                        # Each line is a separate JSON object
+                        for line in chunk_text.strip().split('\n'):
+                            if not line.strip():
+                                continue
+                            
+                            try:
+                                data = json.loads(line)
+                                if "candidates" in data and len(data["candidates"]) > 0:
+                                    candidate = data["candidates"][0]
+                                    if "content" in candidate and "parts" in candidate["content"]:
+                                        parts = candidate["content"]["parts"]
+                                        if len(parts) > 0 and "text" in parts[0]:
+                                            text = parts[0]["text"]
+                                            yield text
+                            except json.JSONDecodeError:
+                                print(f"Failed to parse JSON from line: {line}")
+                    except Exception as e:
+                        print(f"Error processing chunk: {str(e)}")
+                        yield f"[Error processing response: {str(e)}]"
+    except httpx.RequestError as e:
+        print(f"Error communicating with Google Gemini API: {str(e)}")
+        yield f"[Error: {str(e)}]"
+
 def get_error_response(error_message: str) -> str:
     """
     Formats an error message for the client.
@@ -809,4 +1075,163 @@ Error details: {error_message}
 Please try the following:
 1. Check that your local model server is running if using the Local LLM
 2. Verify your API keys are properly configured if using OpenAI models
-3. Contact system administrator if the issue persists""" 
+3. Contact system administrator if the issue persists"""
+
+# Add functions for custom API provider
+async def call_custom_api(
+    messages: List[Dict[str, str]],
+    model: str = "default"
+) -> str:
+    """
+    Call a custom API provider using OpenAI-compatible format.
+    
+    Args:
+        messages: Formatted message history including system, user, and assistant messages
+        model: The model name to use (ignored for custom providers)
+        
+    Returns:
+        The LLM's response as a string
+    """
+    if not os.environ.get("OTHER_API_KEY"):
+        raise ValueError("Custom API key is not set. Please set the OTHER_API_KEY environment variable.")
+    
+    if not os.environ.get("OTHER_API_URL"):
+        raise ValueError("Custom API URL is not set. Please set the OTHER_API_URL environment variable.")
+    
+    try:
+        custom_api_url = os.environ.get("OTHER_API_URL")
+        # Ensure the URL ends with /chat/completions for OpenAI compatibility
+        if not custom_api_url.endswith("/chat/completions"):
+            if custom_api_url.endswith("/"):
+                custom_api_url += "chat/completions"
+            else:
+                custom_api_url += "/chat/completions"
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                custom_api_url,
+                headers={
+                    "Authorization": f"Bearer {os.environ.get('OTHER_API_KEY')}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": model,
+                    "messages": messages,
+                    "temperature": 0.7,
+                    "max_tokens": 1000,
+                    "stream": False
+                }
+            )
+            
+            if response.status_code != 200:
+                error_detail = response.json().get("error", {}).get("message", "Unknown error")
+                raise Exception(f"Custom API error: {error_detail}")
+                
+            result = response.json()
+            
+            # Try to extract the response in OpenAI format
+            if "choices" in result and len(result["choices"]) > 0:
+                if "message" in result["choices"][0] and "content" in result["choices"][0]["message"]:
+                    return result["choices"][0]["message"]["content"]
+            
+            # If we can't extract in OpenAI format, try other common formats
+            if "output" in result:
+                return result["output"]
+            elif "text" in result:
+                return result["text"]
+            elif "response" in result:
+                return result["response"]
+            elif "generated_text" in result:
+                return result["generated_text"]
+            
+            # If we can't extract the response, return an error
+            raise Exception(f"Could not extract response from custom API: {result}")
+    except httpx.RequestError as e:
+        raise Exception(f"Error communicating with custom API: {str(e)}")
+
+async def call_custom_api_streaming(
+    messages: List[Dict[str, str]],
+    model: str = "default"
+) -> AsyncGenerator[str, None]:
+    """
+    Call a custom API provider with streaming enabled.
+    
+    Args:
+        messages: Formatted message history including system, user, and assistant messages
+        model: The model name to use (ignored for custom providers)
+        
+    Yields:
+        Chunks of the LLM's response as they become available
+    """
+    if not os.environ.get("OTHER_API_KEY"):
+        raise ValueError("Custom API key is not set. Please set the OTHER_API_KEY environment variable.")
+    
+    if not os.environ.get("OTHER_API_URL"):
+        raise ValueError("Custom API URL is not set. Please set the OTHER_API_URL environment variable.")
+    
+    try:
+        custom_api_url = os.environ.get("OTHER_API_URL")
+        # Ensure the URL ends with /chat/completions for OpenAI compatibility
+        if not custom_api_url.endswith("/chat/completions"):
+            if custom_api_url.endswith("/"):
+                custom_api_url += "chat/completions"
+            else:
+                custom_api_url += "/chat/completions"
+        
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            async with client.stream(
+                "POST",
+                custom_api_url,
+                headers={
+                    "Authorization": f"Bearer {os.environ.get('OTHER_API_KEY')}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": model,
+                    "messages": messages,
+                    "temperature": 0.7,
+                    "max_tokens": 1000,
+                    "stream": True
+                },
+                timeout=60.0
+            ) as response:
+                if response.status_code != 200:
+                    # Try to parse error details if available
+                    try:
+                        error_data = await response.json()
+                        error_detail = error_data.get("error", {}).get("message", "Unknown error")
+                    except:
+                        error_detail = "Unknown error"
+                    raise Exception(f"Custom API error: {error_detail}")
+                
+                # Process streaming response
+                buffer = ""
+                async for chunk in response.aiter_text():
+                    if chunk.strip():
+                        # Parse the SSE data format
+                        for line in chunk.strip().split('\n'):
+                            if line.startswith('data: '):
+                                data = line[6:]  # Remove 'data: ' prefix
+                                if data.strip() == '[DONE]':
+                                    break
+
+                                try:
+                                    chunk_data = json.loads(data)
+                                    if (
+                                        chunk_data.get("choices") and 
+                                        chunk_data["choices"][0].get("delta") and 
+                                        chunk_data["choices"][0]["delta"].get("content")
+                                    ):
+                                        text_chunk = chunk_data["choices"][0]["delta"]["content"]
+                                        buffer += text_chunk
+                                        yield text_chunk  # Yield each small chunk as it arrives
+                                except Exception as e:
+                                    print(f"Error parsing chunk data: {str(e)}")
+                                    continue
+                
+                # Yield any remaining buffer at the end
+                if buffer:
+                    yield ""
+    
+    except httpx.RequestError as e:
+        raise Exception(f"Error communicating with custom API: {str(e)}") 

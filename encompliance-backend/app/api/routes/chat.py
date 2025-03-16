@@ -4,7 +4,7 @@ from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
 from app.services.llm_service import get_llm_response, call_openai_api_streaming, call_local_model_api
 from app.services.document_service import get_document_context
-from app.core.config import get_settings
+from app.core.config import get_settings, SYSTEM_PROMPT
 from app.database import get_db
 from app.models.query_log import QueryLog
 from app.models.document import Document
@@ -40,10 +40,11 @@ class ChatRequest(BaseModel):
     prompt: str
     operation_type: str = "daycare"
     message_history: Optional[List[Dict[str, str]]] = None
-    model: Optional[str] = None
+    model: Optional[str] = None  # 'local-model' or 'cloud-model'
     pdf_ids: Optional[List[int]] = None  # For backward compatibility
     document_ids: Optional[List[int]] = None
     stream: Optional[bool] = False  # New parameter to enable streaming
+    provider: Optional[str] = "auto"  # Provider selection (auto, openai, anthropic, google)
 
 class ChatResponse(BaseModel):
     text: str
@@ -54,6 +55,13 @@ class ChatHistoryRequest(BaseModel):
     ai_response: str
     operation_type: str
     document_ids: Optional[List[int]] = None
+
+class TestConnectionRequest(BaseModel):
+    api_key: Optional[str] = None
+    provider: Optional[str] = "auto"
+    other_api_url: Optional[str] = None
+    local_model_url: Optional[str] = None
+    is_local: Optional[bool] = False
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat(
@@ -138,7 +146,8 @@ async def chat(
             model=request.model,
             document_context=document_context,  # Pass the document context explicitly
             db=db,
-            current_user_id=current_user.id
+            current_user_id=current_user.id,
+            provider=request.provider  # Pass the provider parameter
         )
         
         # Log the query
@@ -270,46 +279,27 @@ async def stream_chat(
         model = request.model or get_settings().DEFAULT_MODEL
         settings = get_settings()
         
-        # Create a streaming response with the OpenAI API
+        # Create a streaming response with the appropriate API
         async def stream_response():
             collected_response = ""
             try:
-                # Check if we should use OpenAI or local model
-                if model.startswith("gpt-"):
-                    # Use OpenAI streaming
-                    async for chunk in call_openai_api_streaming(messages, model):
-                        collected_response += chunk
-                        yield chunk
-                elif model == "local-model" or settings.USE_LOCAL_MODEL:
-                    # Use local model streaming
-                    # Important: We need to await the function to get the async generator
-                    stream_generator = await get_llm_response(
-                        prompt=request.prompt,
-                        operation_type=request.operation_type,
-                        message_history=message_history,
-                        document_ids=document_ids,
-                        model=model,
-                        document_context=document_context,
-                        current_user_id=current_user.id,
-                        stream=True
-                    )
-                    # Now we can iterate over the generator
-                    async for chunk in stream_generator:
-                        collected_response += chunk
-                        yield chunk
-                else:
-                    # Fallback for unknown models - non-streaming response
-                    result = await get_llm_response(
-                        prompt=request.prompt,
-                        operation_type=request.operation_type,
-                        message_history=message_history,
-                        document_ids=document_ids,
-                        model=model,
-                        document_context=document_context,
-                        current_user_id=current_user.id
-                    )
-                    collected_response = result
-                    yield result
+                # Use the simplified model selection logic
+                stream_generator = await get_llm_response(
+                    prompt=request.prompt,
+                    operation_type=request.operation_type,
+                    message_history=message_history,
+                    document_ids=document_ids,
+                    model=model,
+                    document_context=document_context,
+                    current_user_id=current_user.id,
+                    stream=True,
+                    provider=request.provider
+                )
+                
+                # Now we can iterate over the generator
+                async for chunk in stream_generator:
+                    collected_response += chunk
+                    yield chunk
                 
                 # Log the query after completion
                 try:
@@ -436,4 +426,252 @@ async def save_chat_history(
         return {"success": True, "message": "Chat history saved successfully", "conversation_id": conversation_id}
     except Exception as e:
         print(f"Error saving chat history: {str(e)}")
+        return {"success": False, "error": str(e)}
+
+@router.post("/chat/test-connection")
+async def test_connection(
+    request: TestConnectionRequest,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """
+    Test the connection to the LLM provider API.
+    """
+    try:
+        from app.services.llm_service import detect_provider
+        from app.core.config import SYSTEM_PROMPT
+        
+        # Check if we're testing a local model
+        if request.is_local:
+            if not request.local_model_url:
+                return {"success": False, "error": "Local model URL is required"}
+            
+            # Test connection to local LLM
+            import httpx
+            try:
+                # Use the LM Studio OpenAI-compatible chat endpoint with the correct path
+                base_url = request.local_model_url
+                # Remove trailing slash if present
+                if base_url.endswith('/'):
+                    base_url = base_url[:-1]
+                
+                # Check if /v1 is already in the base URL to avoid duplication
+                if '/v1' in base_url:
+                    endpoint_url = f"{base_url}/chat/completions"
+                else:
+                    endpoint_url = f"{base_url}/v1/chat/completions"
+                
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    response = await client.post(
+                        endpoint_url,
+                        headers={"Content-Type": "application/json"},
+                        json={
+                            "messages": [
+                                {"role": "system", "content": SYSTEM_PROMPT},
+                                {"role": "user", "content": "Hello, this is a test message."}
+                            ],
+                            "max_tokens": 10
+                        },
+                        timeout=10.0
+                    )
+                    
+                    if response.status_code != 200:
+                        return {"success": False, "error": f"Failed to connect to local LLM: {response.text}"}
+                    
+                    return {"success": True, "provider": "local"}
+            except Exception as e:
+                return {"success": False, "error": f"Failed to connect to local LLM: {str(e)}"}
+        
+        # For cloud providers, detect the provider based on the API key
+        if not request.api_key:
+            return {"success": False, "error": "API key is required for cloud providers"}
+            
+        provider = request.provider if request.provider != "auto" else None
+        detected_provider = detect_provider(request.api_key, provider)
+        
+        # Set the appropriate environment variable temporarily for testing
+        import os
+        original_env = {}
+        
+        # Save original environment variables
+        if "OPENAI_API_KEY" in os.environ:
+            original_env["OPENAI_API_KEY"] = os.environ["OPENAI_API_KEY"]
+        if "ANTHROPIC_API_KEY" in os.environ:
+            original_env["ANTHROPIC_API_KEY"] = os.environ["ANTHROPIC_API_KEY"]
+        if "GOOGLE_API_KEY" in os.environ:
+            original_env["GOOGLE_API_KEY"] = os.environ["GOOGLE_API_KEY"]
+        if "OTHER_API_KEY" in os.environ:
+            original_env["OTHER_API_KEY"] = os.environ["OTHER_API_KEY"]
+        if "OTHER_API_URL" in os.environ:
+            original_env["OTHER_API_URL"] = os.environ["OTHER_API_URL"]
+        
+        try:
+            # Set the API key for the detected provider
+            if detected_provider == "openai":
+                os.environ["OPENAI_API_KEY"] = request.api_key
+                # Make a simple test request to the OpenAI API
+                import httpx
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    # First check if the API key is valid by getting models
+                    response = await client.get(
+                        "https://api.openai.com/v1/models",
+                        headers={
+                            "Authorization": f"Bearer {request.api_key}",
+                            "Content-Type": "application/json"
+                        }
+                    )
+                    if response.status_code != 200:
+                        return {"success": False, "error": f"Failed to connect to OpenAI API: {response.text}"}
+                    
+                    # Then test a simple chat completion with our system prompt
+                    chat_response = await client.post(
+                        "https://api.openai.com/v1/chat/completions",
+                        headers={
+                            "Authorization": f"Bearer {request.api_key}",
+                            "Content-Type": "application/json"
+                        },
+                        json={
+                            "model": "gpt-3.5-turbo",
+                            "messages": [
+                                {"role": "system", "content": SYSTEM_PROMPT},
+                                {"role": "user", "content": "Hello, this is a test message."}
+                            ],
+                            "max_tokens": 10
+                        }
+                    )
+                    if chat_response.status_code != 200:
+                        return {"success": False, "error": f"Failed to test chat completion: {chat_response.text}"}
+            elif detected_provider == "anthropic":
+                os.environ["ANTHROPIC_API_KEY"] = request.api_key
+                # Make a simple test request to the Anthropic API
+                import httpx
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    # First check if the API key is valid by getting models
+                    response = await client.get(
+                        "https://api.anthropic.com/v1/models",
+                        headers={
+                            "x-api-key": request.api_key,
+                            "anthropic-version": "2023-06-01",
+                            "Content-Type": "application/json"
+                        }
+                    )
+                    if response.status_code != 200:
+                        return {"success": False, "error": f"Failed to connect to Anthropic API: {response.text}"}
+                    
+                    # Then test a simple message with our system prompt
+                    chat_response = await client.post(
+                        "https://api.anthropic.com/v1/messages",
+                        headers={
+                            "x-api-key": request.api_key,
+                            "anthropic-version": "2023-06-01",
+                            "Content-Type": "application/json"
+                        },
+                        json={
+                            "model": "claude-3-haiku-20240307",
+                            "system": SYSTEM_PROMPT,
+                            "messages": [
+                                {"role": "user", "content": "Hello, this is a test message."}
+                            ],
+                            "max_tokens": 10
+                        }
+                    )
+                    if chat_response.status_code != 200:
+                        return {"success": False, "error": f"Failed to test chat completion: {chat_response.text}"}
+            elif detected_provider == "google":
+                os.environ["GOOGLE_API_KEY"] = request.api_key
+                # Make a simple test request to the Google Gemini API
+                import httpx
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    # First check if the API key is valid by getting models
+                    response = await client.get(
+                        "https://generativelanguage.googleapis.com/v1/models?key=" + request.api_key
+                    )
+                    if response.status_code != 200:
+                        return {"success": False, "error": f"Failed to connect to Google Gemini API: {response.text}"}
+                    
+                    # Then test a simple generation with our system prompt
+                    # Gemini doesn't support system messages directly, so we'll prepend it to the user message
+                    chat_response = await client.post(
+                        "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=" + request.api_key,
+                        headers={
+                            "Content-Type": "application/json"
+                        },
+                        json={
+                            "contents": [
+                                {
+                                    "role": "user",
+                                    "parts": [{"text": f"System instructions: {SYSTEM_PROMPT}\n\nUser message: Hello, this is a test message."}]
+                                }
+                            ],
+                            "generationConfig": {
+                                "maxOutputTokens": 10
+                            }
+                        }
+                    )
+                    if chat_response.status_code != 200:
+                        return {"success": False, "error": f"Failed to test chat completion: {chat_response.text}"}
+            elif detected_provider == "other":
+                # For custom API providers
+                if not request.other_api_url:
+                    return {"success": False, "error": "Custom API URL is required for 'Other' provider"}
+                
+                os.environ["OTHER_API_KEY"] = request.api_key
+                os.environ["OTHER_API_URL"] = request.other_api_url
+                
+                # Make a simple test request to the custom API
+                import httpx
+                
+                # Ensure the URL ends with /models for OpenAI compatibility
+                api_url = request.other_api_url
+                if api_url.endswith("/"):
+                    api_url = api_url[:-1]
+                
+                if not api_url.endswith("/models"):
+                    if "/v1" in api_url:
+                        api_url = f"{api_url}/models"
+                    else:
+                        api_url = f"{api_url}/v1/models"
+                
+                try:
+                    async with httpx.AsyncClient(timeout=10.0) as client:
+                        response = await client.get(
+                            api_url,
+                            headers={
+                                "Authorization": f"Bearer {request.api_key}",
+                                "Content-Type": "application/json"
+                            }
+                        )
+                        if response.status_code != 200:
+                            # If the models endpoint fails, try a simple chat completion
+                            chat_url = api_url.replace("/models", "/chat/completions")
+                            chat_response = await client.post(
+                                chat_url,
+                                headers={
+                                    "Authorization": f"Bearer {request.api_key}",
+                                    "Content-Type": "application/json"
+                                },
+                                json={
+                                    "messages": [
+                                        {"role": "system", "content": SYSTEM_PROMPT},
+                                        {"role": "user", "content": "Hello, this is a test message."}
+                                    ],
+                                    "max_tokens": 10
+                                }
+                            )
+                            if chat_response.status_code != 200:
+                                return {"success": False, "error": f"Failed to connect to custom API: {response.text}"}
+                except Exception as e:
+                    return {"success": False, "error": f"Failed to connect to custom API: {str(e)}"}
+            else:
+                return {"success": False, "error": f"Unknown provider: {detected_provider}. Please select a provider manually."}
+            
+            return {"success": True, "provider": detected_provider}
+        finally:
+            # Restore original environment variables
+            for key, value in original_env.items():
+                os.environ[key] = value
+    except Exception as e:
+        print(f"Error testing connection: {str(e)}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
         return {"success": False, "error": str(e)} 

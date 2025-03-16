@@ -11,9 +11,12 @@ import Dashboard from './pages/Dashboard';
 import SearchRegulationsPage from './pages/SearchRegulationsPage';
 import UserSettingsPage from './pages/UserSettingsPage';
 import AllQueriesPage from './pages/AllQueriesPage';
+import TermsPage from './pages/TermsPage';
+import PrivacyPage from './pages/PrivacyPage';
+import ContactPage from './pages/ContactPage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ModelProvider } from './contexts/ModelContext';
-import { checkAuthToken, initDebugTools } from './debug';
+import { ThemeProvider } from './contexts/ThemeContext';
 import './App.css';
 
 function AppContent() {
@@ -23,11 +26,6 @@ function AppContent() {
   const [userDocuments, setUserDocuments] = useState<any[]>([]);
   const { user, loading, logout } = useAuth();
 
-  // Initialize debug tools
-  useEffect(() => {
-    initDebugTools();
-  }, []);
-
   // Set operation type from user data if available
   useEffect(() => {
     if (user && user.operation_type) {
@@ -35,16 +33,8 @@ function AppContent() {
     }
   }, [user]);
 
-  useEffect(() => {
-    console.log("App - Authentication state changed:", user);
-    console.log("App - Current page:", currentPage);
-    const tokenStatus = checkAuthToken();
-    console.log("Token status:", tokenStatus);
-  }, [user, currentPage]);
-
   const handleRefreshDocuments = async () => {
     try {
-      console.log('[DEBUG] App: Refreshing documents before rendering dashboard');
       if (user) {
         // Clear any previous document cache
         localStorage.removeItem('cachedDocuments');
@@ -52,11 +42,10 @@ function AppContent() {
         // Pre-fetch documents to ensure they're loaded
         const documentService = (await import('./services/documentService')).default;
         const documents = await documentService.refreshDocumentCache();
-        console.log(`[DEBUG] App: Pre-loaded ${documents.length} documents`, documents);
         setUserDocuments(documents);
       }
     } catch (err) {
-      console.error('[DEBUG] App: Error refreshing documents:', err);
+      // Error handling without logging
     }
   };
 
@@ -67,8 +56,6 @@ function AppContent() {
   }, [currentPage, user]);
 
   const handleNavigate = (page: string) => {
-    console.log(`App - Navigating to: ${page}`);
-    
     // If we're going to the dashboard, refresh documents first
     if (page === 'dashboard') {
       handleRefreshDocuments().then(() => {
@@ -98,7 +85,6 @@ function AppContent() {
       const parts = currentPage.split('/');
       // Extract the document ID from the path, handling both formats
       const documentId = parts[parts.length - 1];
-      console.log(`[DEBUG] Navigating to document with ID: ${documentId}`);
       return <DocumentViewerPage documentId={documentId} navigateTo={handleNavigate} />;
     }
     
@@ -128,6 +114,12 @@ function AppContent() {
         return <UserSettingsPage navigateTo={handleNavigate} />;
       case 'allQueries':
         return <AllQueriesPage navigateTo={handleNavigate} />;
+      case 'terms':
+        return <TermsPage navigateTo={handleNavigate} />;
+      case 'privacy':
+        return <PrivacyPage navigateTo={handleNavigate} />;
+      case 'contact':
+        return <ContactPage navigateTo={handleNavigate} />;
       case 'documentUpload':
         return (
           <ManualUploadPage 
@@ -144,12 +136,12 @@ function AppContent() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
+    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-dark-bg dark:text-dark-text transition-colors duration-1000">
       <Header navigateTo={handleNavigate} currentPage={currentPage} />
       <main className="flex-grow">
         {renderPage()}
       </main>
-      <Footer />
+      <Footer navigateTo={handleNavigate} />
     </div>
   );
 }
@@ -158,7 +150,9 @@ function App() {
   return (
     <AuthProvider>
       <ModelProvider>
-        <AppContent />
+        <ThemeProvider>
+          <AppContent />
+        </ThemeProvider>
       </ModelProvider>
     </AuthProvider>
   );

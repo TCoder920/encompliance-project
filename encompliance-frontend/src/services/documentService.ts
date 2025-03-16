@@ -29,8 +29,6 @@ class DocumentService {
       docLogger.log(`Uploading document: ${file.name} (${file.size} bytes)`);
       const formData = new FormData();
       formData.append('file', file);
-
-      console.log(`[DEBUG] Starting document upload request for ${file.name}`);
       
       const response = await api.post('/documents/upload', formData, {
         headers: {
@@ -38,24 +36,25 @@ class DocumentService {
         },
       });
 
-      console.log(`[DEBUG] Document upload response:`, response);
       if (!response.data) {
-        console.error('[DEBUG] Document upload response missing data');
+        throw new Error('Document upload response missing data');
       } else if (!response.data.id) {
-        console.error('[DEBUG] Document upload response missing ID', response.data);
-      } else {
-        console.log(`[DEBUG] Document uploaded successfully with ID: ${response.data.id}`);
+        throw new Error('Document upload response missing ID');
       }
 
       docLogger.success('Document upload successful', { 
-        documentId: response.data.id, 
-        filename: response.data.filename 
+        id: response.data.id,
+        filename: response.data.filename,
+        fileSize: response.data.file_size
       });
+
+      // Clear document cache to ensure fresh data on next fetch
+      localStorage.removeItem('cachedDocuments');
+      
       return response.data;
     } catch (err) {
-      console.error('[DEBUG] Document upload error:', err);
-      docLogger.error('Error uploading document', err);
-      throw err; // Rethrow to allow components to handle the error
+      docLogger.error('Document upload failed', { error: err });
+      throw err;
     } finally {
       if (operation) {
         docLogger.end(operation);
@@ -70,38 +69,20 @@ class DocumentService {
       let attempts = 0;
       const maxAttempts = 2;
       
-      console.log(`[DEBUG] Starting document list request`);
-      
       while (attempts < maxAttempts) {
         try {
           attempts++;
           docLogger.log(`Attempt ${attempts}/${maxAttempts} to fetch documents`);
           const response = await api.get<DocumentListResponse>('/documents/list');
-          console.log(`[DEBUG] Document list response:`, response);
-          
-          docLogger.log(`Documents API response (attempt ${attempts}):`, response.data);
           
           if (response.data && Array.isArray(response.data.documents)) {
-            console.log(`[DEBUG] Found ${response.data.documents.length} documents:`, response.data.documents);
             docLogger.success(`Found ${response.data.documents.length} documents`);
             
-            // Log each document for debugging
-            response.data.documents.forEach((doc, index) => {
-              docLogger.log(`Document ${index + 1}:`, {
-                id: doc.id,
-                filename: doc.filename,
-                uploaded_at: doc.uploaded_at,
-                file_type: doc.file_type,
-                filepath: doc.filepath
-              });
-            });
-            
             // Cache documents locally (could use localStorage or state management)
-            window.localStorage.setItem('cachedDocuments', JSON.stringify(response.data.documents));
+            localStorage.setItem('cachedDocuments', JSON.stringify(response.data.documents));
             
             return response.data.documents;
           } else {
-            console.error(`[DEBUG] Unexpected document list response format:`, response.data);
             docLogger.warn('Unexpected response format:', response.data);
             if (attempts < maxAttempts) {
               docLogger.log(`Retrying document list (attempt ${attempts + 1}/${maxAttempts})...`);
@@ -109,7 +90,6 @@ class DocumentService {
             }
           }
         } catch (error) {
-          console.error(`[DEBUG] Error in document list attempt ${attempts}:`, error);
           docLogger.error(`Error in attempt ${attempts}:`, error);
           if (attempts < maxAttempts) {
             docLogger.log(`Retrying after error (attempt ${attempts + 1}/${maxAttempts})...`);
@@ -123,18 +103,14 @@ class DocumentService {
       docLogger.error('Failed to fetch documents after all attempts');
       
       // Try to return cached documents if any
-      const cachedDocuments = window.localStorage.getItem('cachedDocuments');
+      const cachedDocuments = localStorage.getItem('cachedDocuments');
       if (cachedDocuments) {
-        const parsed = JSON.parse(cachedDocuments);
-        console.log(`[DEBUG] Returning ${parsed.length} cached documents as fallback`);
-        docLogger.warn('Returning cached documents as fallback', { count: parsed.length });
-        return parsed;
+        docLogger.warn('Returning cached documents as fallback', { count: JSON.parse(cachedDocuments).length });
+        return JSON.parse(cachedDocuments);
       }
       
-      console.log(`[DEBUG] No documents found - returning empty array`);
       return []; // Return empty array after all attempts fail
     } catch (err) {
-      console.error('[DEBUG] Error fetching documents:', err);
       docLogger.error('Error fetching documents:', err);
       return []; // Return empty array on error
     } finally {
@@ -168,7 +144,6 @@ class DocumentService {
   // Utility function to get the embeddable URL for a document (for iframe embedding)
   getEmbeddableDocumentUrl(documentId: string): string {
     const token = localStorage.getItem('token');
-    console.log(`Generating embeddable URL for document ${documentId}`);
     // Point directly to the correct endpoint for viewing documents
     return `${backendUrl}/api/v1/view/${documentId}?token=${token}`;
   }
@@ -183,14 +158,12 @@ class DocumentService {
     const token = localStorage.getItem('token');
     // Use the correct API endpoint for viewing documents
     const url = `${backendUrl}/api/v1/view/${documentId}?token=${token}`;
-    console.log(`Opening document in new tab: ${url}`);
     window.open(url, '_blank');
   }
 
   // Open Minimum Standards PDF in a new tab
   openMinimumStandardsInNewTab(): void {
     const url = this.getEmbeddableMinimumStandardsUrl();
-    console.log(`Opening minimum standards in new tab: ${url}`);
     window.open(url, '_blank');
   }
 
@@ -205,34 +178,23 @@ class DocumentService {
     try {
       // First clear any existing cache
       localStorage.removeItem('cachedDocuments');
-      docLogger.log('Document cache cleared');
       
       // Make a direct API call to ensure we get fresh data
       const response = await api.get<DocumentListResponse>('/documents/list');
-      
-      console.log(`[DEBUG] Direct API call for document refresh:`, response);
       
       if (response.data && Array.isArray(response.data.documents)) {
         const documents = response.data.documents;
         // Store in localStorage for backup
         localStorage.setItem('cachedDocuments', JSON.stringify(documents));
         
-        // Log success with document details
-        console.log(`[DEBUG] Document cache refresh successful, found ${documents.length} documents:`);
-        documents.forEach((doc, i) => {
-          console.log(`[DEBUG] Document ${i+1}: ID=${doc.id}, Name=${doc.filename}`);
-        });
-        
         docLogger.success('Document cache refreshed successfully', { count: documents.length });
         return documents;
       } else {
         // If response format is unexpected, log error and return empty array
-        console.error(`[DEBUG] Unexpected response format in refreshDocumentCache:`, response.data);
         docLogger.error('Unexpected response format during cache refresh', null, { response: response.data });
         return [];
       }
     } catch (err) {
-      console.error('[DEBUG] Failed to refresh document cache:', err);
       docLogger.error('Failed to refresh document cache', err);
       
       return [];

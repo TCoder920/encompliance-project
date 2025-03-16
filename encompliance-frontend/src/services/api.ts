@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { logApiRequest } from '../debug';
 
 const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
@@ -22,16 +21,9 @@ api.interceptors.request.use(
       config.headers['x-token'] = token;
     }
     
-    // Debug log (remove in production)
-    const url = config.url || '';
-    const method = config.method?.toUpperCase() || 'UNKNOWN';
-    logApiRequest(url, method, !!token);
-    console.log(`Request headers:`, config.headers);
-    
     return config;
   },
   (error) => {
-    console.error('API Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
@@ -39,82 +31,75 @@ api.interceptors.request.use(
 // Add response interceptor to handle auth errors
 api.interceptors.response.use(
   (response) => {
-    // Debug log (remove in production)
-    console.log(`API Response from ${response.config.url}: ${response.status}`);
-    
     // Special handling for document list response
     if (response.config.url?.includes('/documents/list')) {
-      console.log('Document list response received:', response.data);
-      
       // Check if the documents array exists
       if (!response.data?.documents) {
-        console.warn('Document list response missing documents array:', response.data);
-      } else if (response.data.documents.length === 0) {
-        console.warn('Document list returned empty array');
+        // If not, try to normalize the response
+        if (Array.isArray(response.data)) {
+          response.data = { documents: response.data };
+        } else if (response.data && typeof response.data === 'object') {
+          response.data = { documents: [] };
+        }
+      }
+      
+      // Ensure documents is at least an empty array
+      if (!response.data.documents) {
+        response.data.documents = [];
       }
     }
     
     return response;
   },
   async (error) => {
-    // Debug log with full details for debugging purposes
-    console.error(`API Error from ${error.config?.url}:`, error);
-    console.error('Full error details:', {
-      status: error.response?.status,
-      data: error.response?.data,
-      headers: error.response?.headers,
-      config: error.config
-    });
-    
     // Special handling for document-related errors
     if (error.config?.url?.includes('/documents/')) {
-      console.error('Document API error:', error.response?.data?.detail || error.message);
+      // Add a more user-friendly message
+      error.userMessage = 'There was a problem with your document. Please try again.';
     }
     
-    const originalRequest = error.config;
-    
-    // If error is 401 and not a retry
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      // Mark as retry
-      originalRequest._retry = true;
-      
-      try {
-        console.log('Attempting to refresh token...');
-        // Try to refresh the token
-        const refreshResponse = await axios.post(`${baseURL}/refresh-token`, {}, {
-          withCredentials: false,
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'x-token': localStorage.getItem('token'),
+    // Handle 401 Unauthorized errors (expired token)
+    if (error.response?.status === 401) {
+      // Only try to refresh if we have a token
+      if (localStorage.getItem('token')) {
+        // Store the original request to retry it
+        const originalRequest = error.config;
+        
+        // Prevent infinite loops
+        if (!originalRequest._retry) {
+          originalRequest._retry = true;
+          
+          try {
+            // Try to refresh the token
+            const refreshResponse = await axios.post(`${baseURL}/refresh-token`, {}, {
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                'x-token': localStorage.getItem('token'),
+              }
+            });
+            
+            // If successful, update the token
+            if (refreshResponse.status === 200) {
+              const newToken = refreshResponse.data.access_token;
+              localStorage.setItem('token', newToken);
+              
+              // Update the Authorization header
+              originalRequest.headers.Authorization = `Bearer ${newToken}`;
+              originalRequest.headers['x-token'] = newToken;
+              
+              // Retry the original request
+              return axios(originalRequest);
+            }
+          } catch (refreshError) {
+            // If refresh fails, clear the token and let the app handle redirection
+            localStorage.removeItem('token');
           }
-        });
-        
-        if (refreshResponse.data.access_token) {
-          // Save the new token
-          const newToken = refreshResponse.data.access_token;
-          localStorage.setItem('token', newToken);
-          console.log('Token refreshed successfully');
-          
-          // Update the Authorization header
-          originalRequest.headers.Authorization = `Bearer ${newToken}`;
-          originalRequest.headers['x-token'] = newToken;
-          
-          // Retry the original request
-          return api(originalRequest);
         }
-      } catch (refreshError) {
-        // If refresh fails, clear the token and let the app handle redirection
-        console.error('Token refresh failed:', refreshError);
-        localStorage.removeItem('token');
-        
-        // Dispatch an event that auth components can listen for
-        window.dispatchEvent(new CustomEvent('auth-token-expired'));
       }
     }
     
     // For CORS errors, provide a more helpful message
     if (error.message === 'Network Error') {
-      console.error('CORS or network error detected');
       error.isCorsProblem = true;
     }
     
@@ -149,59 +134,50 @@ export const authApi = {
     console.log('Attempting to fetch user info');
     const token = localStorage.getItem('token');
     
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+    
     // First try the user-info endpoint that has explicit CORS handling
     try {
-      console.log('Trying /users/user-info endpoint');
       const response = await fetch(`${baseURL}/users/user-info`, {
         method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
-          'x-token': token || '',
-        },
-        mode: 'cors',
+          'x-token': token,
+        }
       });
       
       if (response.ok) {
-        console.log('Successfully fetched user from /users/user-info');
         return await response.json();
       }
-      console.log(`/users/user-info failed with status: ${response.status}`);
     } catch (error) {
-      console.error('Error fetching from /users/user-info:', error);
+      // Continue to next method
     }
     
     // Fall back to the standard endpoint
     try {
-      console.log('Trying /users/me endpoint');
       const response = await fetch(`${baseURL}/users/me`, {
         method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
-          'x-token': token || '',
-        },
-        mode: 'cors',
+          'x-token': token,
+        }
       });
       
       if (response.ok) {
-        console.log('Successfully fetched user from /users/me');
         return await response.json();
       }
-      console.log(`/users/me failed with status: ${response.status}`);
     } catch (error) {
-      console.error('Error fetching from /users/me:', error);
+      // Continue to next method
     }
     
     // If all direct fetch attempts fail, try the axios instance
     try {
-      console.log('Trying axios api instance');
       const response = await api.get('/users/me');
-      console.log('Successfully fetched user with axios');
       return response.data;
     } catch (error) {
-      console.error('All user info fetch attempts failed:', error);
-      throw error;
+      throw new Error('Failed to get user info after multiple attempts');
     }
   }
 };

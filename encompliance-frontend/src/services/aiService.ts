@@ -12,33 +12,27 @@ export const getAIResponse = async (
   prompt: string,
   operationType: string,
   messageHistory: any[] = [],
-  model: string = 'local-model',
-  documentIds?: number[],
+  model: string = 'gpt-4o-mini',
+  documentIds?: number[]
 ): Promise<string> => {
-  console.log(`Sending AI request with model: ${model}`);
-  console.log(`Document IDs included: ${documentIds ? documentIds.join(', ') : 'none'}`);
-  
   try {
-    // For local models, use streaming by default
-    const useStreaming = model === 'local-model' || !model.startsWith('gpt-');
-    
-    const response = await api.post('/chat', {
+    // Prepare the request payload
+    const payload = {
       prompt,
       operation_type: operationType,
       message_history: messageHistory,
       model,
-      document_ids: documentIds,
-      stream: useStreaming // Enable streaming for local models
-    });
+      document_ids: documentIds
+    };
     
-    if (response.data.error) {
-      throw new Error(response.data.error);
-    }
+    // Send the request to the API
+    const response = await api.post('/chat', payload);
     
-    return response.data.text;
+    // Return the response text
+    return response.data.response;
   } catch (error) {
-    console.error('Error getting AI response:', error);
-    throw error;
+    // Handle errors
+    throw new Error(error instanceof Error ? error.message : 'Failed to get AI response');
   }
 };
 
@@ -54,103 +48,104 @@ export const getStreamingAIResponse = (
   onChunk: (chunk: string) => void,
   onError: (error: string) => void,
   onComplete: () => void,
-  documentIds?: number[],
-): () => void => {
-  console.log(`Sending streaming AI request with model: ${model}`);
-  console.log(`Document IDs included: ${documentIds ? documentIds.join(', ') : 'none'}`);
-
-  try {
-    // Create the request
-    const controller = new AbortController();
-    const signal = controller.signal;
-
-    // Make the API call
-    fetch(`${api.defaults.baseURL}/chat/stream`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify({
+  documentIds?: number[]
+): (() => void) => {
+  // Create an AbortController to allow cancelling the stream
+  const controller = new AbortController();
+  
+  // Start the streaming process
+  (async () => {
+    try {
+      // Prepare the request payload
+      const payload = {
         prompt,
         operation_type: operationType,
         message_history: messageHistory,
         model,
-        document_ids: documentIds,
-        stream: true // Explicitly set stream to true
-      }),
-      signal
-    })
-    .then(response => {
+        stream: true,
+        document_ids: documentIds
+      };
+      
+      // Make the request with the signal for aborting
+      const response = await fetch(`${api.defaults.baseURL}/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
+      
       if (!response.ok) {
         throw new Error(`API error: ${response.status} ${response.statusText}`);
       }
       
-      // Set up the streaming reader
-      const reader = response.body?.getReader();
+      if (!response.body) {
+        throw new Error('Response body is null');
+      }
+      
+      // Set up the stream reader
+      const reader = response.body.getReader();
       const decoder = new TextDecoder();
       
       // Process the stream
-      const processStream = async () => {
-        if (!reader) return;
-        
+      while (true) {
         try {
-          while (true) {
-            const { done, value } = await reader.read();
-            
-            if (done) {
-              onComplete();
-              break;
-            }
-            
-            // Decode and process the chunk
-            const chunk = decoder.decode(value, { stream: true });
-            onChunk(chunk);
+          const { done, value } = await reader.read();
+          
+          if (done) {
+            onComplete();
+            break;
           }
-        } catch (error) {
-          console.error('Error reading stream:', error);
-          onError(error instanceof Error ? error.message : 'Error reading response stream');
+          
+          // Decode the chunk and pass it to the callback
+          const chunk = decoder.decode(value, { stream: true });
+          onChunk(chunk);
+        } catch (error: any) {
+          if (error.name === 'AbortError') {
+            // This is an expected error when the user cancels
+            break;
+          }
+          
+          // Handle other stream reading errors
+          onError('Error reading stream');
+          break;
         }
-      };
-      
-      processStream();
-    })
-    .catch(error => {
-      console.error('Error in streaming request:', error);
-      onError(error instanceof Error ? error.message : 'Unknown error in streaming request');
-    });
-    
-    // Return an abort function
-    return () => controller.abort();
-  } catch (error) {
-    console.error('Error setting up streaming:', error);
-    onError(error instanceof Error ? error.message : 'Unknown error setting up streaming request');
-    return () => {}; // Return empty function as fallback
-  }
+      }
+    } catch (error) {
+      // Handle request errors
+      onError(error instanceof Error ? error.message : 'Error in streaming request');
+    }
+  })().catch(error => {
+    // Handle any uncaught errors in the async function
+    onError(error instanceof Error ? error.message : 'Error setting up streaming');
+  });
+  
+  // Return a function to abort the stream
+  return () => controller.abort();
 };
 
 /**
  * Delete a query from the history.
  */
-export const deleteQuery = async (queryId: number): Promise<{ message: string }> => {
+export const deleteQuery = async (queryId: number): Promise<{ success: boolean }> => {
   try {
     const response = await api.delete(`/query/${queryId}`);
     return response.data;
   } catch (error) {
-    console.error('Error deleting query:', error);
-    throw error;
+    throw new Error('Failed to delete query');
   }
 };
 
 /**
  * Delete all queries for the current user.
  */
-export const deleteAllQueries = async (): Promise<{ message: string, count: number }> => {
+export const deleteAllQueries = async (): Promise<{ success: boolean; count: number }> => {
   try {
-    const response = await api.delete('/queries/all');
+    const response = await api.delete('/query-logs/all');
     return response.data;
   } catch (error) {
-    console.error('Error deleting all queries:', error);
-    throw error;
+    throw new Error('Failed to delete all queries');
   }
 };

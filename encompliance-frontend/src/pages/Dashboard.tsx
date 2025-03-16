@@ -48,7 +48,6 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
       try {
         // If we have preloaded documents, use them first
         if (preloadedDocuments && preloadedDocuments.length > 0) {
-          console.log(`[DEBUG] Dashboard: Using ${preloadedDocuments.length} preloaded documents`);
           setDocuments(preloadedDocuments);
           setShowUploadPrompt(preloadedDocuments.length === 0);
           return;
@@ -57,11 +56,9 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
         // Otherwise refresh from the API
         localStorage.removeItem('cachedDocuments'); // Clear any cache first
         const userDocuments = await documentService.refreshDocumentCache();
-        console.log(`[DEBUG] Dashboard mount: Loaded ${userDocuments.length} documents`, userDocuments);
         setDocuments(userDocuments);
         setShowUploadPrompt(userDocuments.length === 0);
       } catch (err) {
-        console.error('[DEBUG] Dashboard mount: Error refreshing documents:', err);
         setDocuments([]);
         setShowUploadPrompt(true);
       }
@@ -70,26 +67,17 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
     // Fetch actual query logs from the backend
     const fetchQueryLogs = async () => {
       try {
-        console.log('Fetching query logs from API...');
-        console.log(`Page: ${page}, Logs per page: ${logsPerPage}`);
-        
         // Use the API service with the correct base URL
         const skip = (page - 1) * logsPerPage;
         const response = await api.get(`/query-logs?limit=${logsPerPage}&skip=${skip}`);
-        
-        console.log('Raw API response:', response);
         
         // Set total logs and calculate total pages
         setTotalLogs(response.data.total || 0);
         setTotalPages(Math.ceil((response.data.total || 0) / logsPerPage));
         
         if (response.data && response.data.logs) {
-          console.log('Fetched query logs:', response.data.logs);
-          
           // Validate and transform the data if needed
           const validLogs = response.data.logs.map((log: any) => {
-            console.log('Processing log:', log);
-            
             // Ensure all required fields are present
             if (!log.query_text && log.query) {
               log.query_text = log.query;
@@ -102,29 +90,17 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
               log.created_at = log.timestamp;
             }
             
-            console.log('Processed log:', {
-              id: log.id,
-              query_text: log.query_text,
-              response_text: log.response_text ? log.response_text.substring(0, 30) + '...' : 'None',
-              created_at: log.created_at,
-              conversation_id: log.conversation_id,
-              document_reference: log.document_reference
-            });
-            
             return log;
           });
           
           // Use the utility function to deduplicate logs
           const deduplicatedLogs = deduplicateQueryLogs(validLogs);
           
-          console.log('Setting query logs state with:', deduplicatedLogs);
           setQueryLogs(deduplicatedLogs || []);
         } else {
-          console.warn('Query logs API returned no data:', response.data);
           setQueryLogs([]);
         }
       } catch (err) {
-        console.error('Error fetching query logs:', err);
         // Don't set error on failed fetch - just show empty state
         setQueryLogs([]);
       } finally {
@@ -147,7 +123,7 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
           });
         }
       } catch (err) {
-        console.error('Error fetching account details:', err);
+        // Error handling
       }
     };
     
@@ -160,7 +136,6 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
         documentLogger.docSuccess('Dashboard: All data loaded successfully');
       } catch (err) {
         documentLogger.docError('Dashboard: Error loading dashboard data', { error: err });
-        console.error('Dashboard: Error loading data:', err);
       } finally {
         setIsLoading(false);
       }
@@ -175,28 +150,22 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
   
   const handleNavigation = (page: string) => {
     try {
-      console.log(`[DEBUG] Dashboard - Navigating to: ${page}`);
       // If navigating to a document, ensure it has the right format
       if (page.startsWith('document/')) {
         const docId = page.split('/')[1];
-        console.log(`[DEBUG] Document navigation - ID: ${docId}`);
       }
       navigateTo(page);
     } catch (err) {
-      console.error('Navigation error:', err);
       setLocalError('Unable to navigate to the requested page. Please try again.');
     }
   };
   
   const handleViewQuery = async (queryId: number) => {
     try {
-      console.log(`Fetching query details for ID: ${queryId}`);
       // Use the API service with the correct base URL
       const response = await api.get(`/query/${queryId}`);
       
       if (response.data) {
-        console.log('Query details retrieved successfully:', response.data);
-        
         // Transform the response to match our QueryLog interface
         const queryData: QueryLog = {
           id: response.data.id,
@@ -211,11 +180,9 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
         setSelectedQuery(queryData);
         setShowQuerySummary(true);
       } else {
-        console.error('Query details API returned no data');
         setLocalError('Failed to load query details. Empty response from server.');
       }
     } catch (err) {
-      console.error('Error fetching query details:', err);
       setLocalError('Failed to load query details. Please try again.');
     }
   };
@@ -244,7 +211,6 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
       
       setLocalError(null);
     } catch (error) {
-      console.error('Error deleting query:', error);
       setLocalError('Failed to delete the conversation. Please try again.');
     } finally {
       setIsLoading(false);
@@ -262,7 +228,6 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
       documentLogger.docLog('Dashboard: Starting document upload process', { fileName: file.name });
       setIsLoading(true); // Show loading state
       const uploadedDoc = await documentService.uploadDocument(file);
-      console.log(`[DEBUG] Document uploaded successfully:`, uploadedDoc);
       setUploadSuccess(true);
       setShowUploadPrompt(false);
       documentLogger.docSuccess('Dashboard: Document upload successful', { fileName: file.name, id: uploadedDoc.id });
@@ -275,31 +240,26 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
         localStorage.removeItem('cachedDocuments');
         
         // Direct API call to get fresh document list
-        console.log('[DEBUG] Making direct API call to get document list after upload');
         const api = (await import('../services/api')).default;
         const response = await api.get('/documents/list');
         
         if (response.data && Array.isArray(response.data.documents)) {
           const userDocuments = response.data.documents;
-          console.log(`[DEBUG] Got ${userDocuments.length} documents from direct API call:`, userDocuments);
           setDocuments(userDocuments);
           documentLogger.docSuccess('Dashboard: Document list refreshed successfully', { 
             count: userDocuments.length,
             documents: userDocuments.map((d: any) => ({ id: d.id, filename: d.filename }))
           });
         } else {
-          console.error('[DEBUG] Unexpected response format from documents API:', response.data);
           // Fallback to document service
           const userDocuments = await documentService.refreshDocumentCache();
           setDocuments(userDocuments);
         }
       } catch (refreshError) {
-        console.error(`[DEBUG] Error refreshing document list:`, refreshError);
         documentLogger.docError('Dashboard: Error refreshing document list', { error: refreshError });
         setLocalError('Document uploaded but failed to refresh the list. Please try again.');
       }
     } catch (err) {
-      console.error(`[DEBUG] Error uploading document:`, err);
       documentLogger.docError('Dashboard: Error uploading document', { error: err });
       setLocalError('Failed to upload document. Please try again.');
     } finally {
@@ -309,8 +269,6 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
   };
   
   const handleViewStandards = () => {
-    console.log(`[DEBUG] Dashboard: Redirecting to official minimum standards document`);
-    
     // Use the document service to open the minimum standards in a new tab
     documentService.openMinimumStandardsInNewTab();
   };
@@ -318,7 +276,6 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
   const handleViewDocument = (documentId: number) => {
     // Make sure to use string conversion for documentId
     const docIdStr = documentId.toString();
-    console.log(`[DEBUG] Dashboard: Viewing document with ID: ${docIdStr}`);
     
     // Use the document service to open the document in a new tab
     documentService.openDocumentInNewTab(docIdStr);
@@ -331,7 +288,6 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
       const userDocuments = await documentService.listDocuments();
       setDocuments(userDocuments);
     } catch (err) {
-      console.error('Error deleting document:', err);
       setLocalError('Failed to delete document. Please try again.');
     }
   };
@@ -345,14 +301,14 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8 flex justify-center items-center h-64">
-        <div className="animate-pulse text-navy-blue">Loading dashboard...</div>
+        <div className="animate-pulse text-navy-blue dark:text-white">Loading dashboard...</div>
       </div>
     );
   }
   
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-navy-blue mb-6 font-times">Owner Dashboard</h1>
+      <h1 className="text-3xl font-bold text-navy-blue dark:text-white mb-6 font-times">Owner Dashboard</h1>
       
       {localError && (
         <ErrorMessage 
@@ -371,14 +327,14 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
       )}
       
       {showUploadPrompt && !uploadSuccess && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+        <div className="bg-blue-50 dark:bg-gray-700 border border-blue-200 dark:border-gray-600 rounded-lg p-6 mb-6">
           <div className="flex flex-col items-center text-center">
-            <div className="flex-shrink-0 text-blue-500 mb-4">
+            <div className="flex-shrink-0 text-blue-500 dark:text-blue-400 mb-4">
               <FileText className="h-10 w-10" />
             </div>
             <div>
-              <h3 className="text-lg font-medium text-blue-800 mb-2">Upload Required Documents</h3>
-              <div className="text-sm text-blue-700">
+              <h3 className="text-lg font-medium text-blue-800 dark:text-blue-300 mb-2">Upload Required Documents</h3>
+              <div className="text-sm text-blue-700 dark:text-blue-200">
                 <p>Please upload your required compliance documents to ensure your center meets all regulatory requirements.</p>
                 <div className="mt-6 max-w-md mx-auto">
                   <DocumentUploader 
@@ -394,22 +350,22 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
       )}
       
       {uploadSuccess && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+        <div className="bg-green-50 dark:bg-green-900 border border-green-200 dark:border-green-700 rounded-lg p-4 mb-6">
           <div className="flex items-start">
-            <div className="flex-shrink-0 text-green-500 mt-0.5">
+            <div className="flex-shrink-0 text-green-500 dark:text-green-400 mt-0.5">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
             </div>
             <div className="ml-3">
-              <h3 className="text-sm font-medium text-green-800">Document Upload Successful</h3>
-              <div className="mt-2 text-sm text-green-700">
+              <h3 className="text-sm font-medium text-green-800 dark:text-green-300">Document Upload Successful</h3>
+              <div className="mt-2 text-sm text-green-700 dark:text-green-200">
                 <p>Your compliance document has been uploaded successfully.</p>
               </div>
               <div className="mt-2">
                 <button
                   onClick={() => setUploadSuccess(false)}
-                  className="text-sm text-green-700 hover:text-green-900 font-medium underline"
+                  className="text-sm text-green-700 dark:text-green-300 hover:text-green-900 dark:hover:text-green-100 font-medium underline"
                 >
                   Dismiss
                 </button>
@@ -420,22 +376,21 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
       )}
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-bold text-navy-blue mb-4">Quick Access</h2>
+        <div className="bg-white dark:bg-dark-surface p-6 rounded-lg shadow-md">
+          <h2 className="text-xl font-bold text-navy-blue dark:text-white mb-4">Quick Access</h2>
           <button 
             onClick={() => {
               // Navigate to the document viewer page for minimum standards
-              console.log('[DEBUG] Dashboard: Navigating to minimum standards document');
               handleViewStandards();
             }}
-            className="w-full bg-navy-blue text-white py-2 px-4 rounded mb-3 flex items-center justify-center"
+            className="w-full bg-navy-blue text-white dark:bg-blue-700 py-2 px-4 rounded mb-3 flex items-center justify-center hover:bg-blue-800 dark:hover:bg-blue-600 transition-colors duration-200"
           >
             <FileText className="mr-2 h-5 w-5" />
             View Minimum Standards
           </button>
           <button 
             onClick={() => handleNavigation('search')}
-            className="w-full border border-navy-blue text-navy-blue py-2 px-4 rounded mb-3 flex items-center justify-center"
+            className="w-full border border-navy-blue text-navy-blue dark:border-blue-500 dark:text-blue-400 py-2 px-4 rounded mb-3 flex items-center justify-center hover:bg-blue-50 dark:hover:bg-gray-800 transition-colors duration-200"
           >
             <Search className="mr-2 h-5 w-5" />
             Search Regulations
@@ -443,7 +398,7 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
           {!showUploadPrompt && (
             <button 
               onClick={() => navigateTo('documentUpload')}
-              className="w-full border border-navy-blue text-navy-blue py-2 px-4 rounded flex items-center justify-center"
+              className="w-full border border-navy-blue text-navy-blue dark:border-blue-500 dark:text-blue-400 py-2 px-4 rounded flex items-center justify-center hover:bg-blue-50 dark:hover:bg-gray-800 transition-colors duration-200"
             >
               <Upload className="mr-2 h-5 w-5" />
               Upload Documents
@@ -451,74 +406,74 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
           )}
         </div>
         
-        <div className="bg-white p-6 rounded-lg shadow-md md:col-span-2">
-          <h2 className="text-xl font-bold text-navy-blue mb-4">Account Overview</h2>
+        <div className="bg-white dark:bg-dark-surface p-6 rounded-lg shadow-md md:col-span-2">
+          <h2 className="text-xl font-bold text-navy-blue dark:text-white mb-4">Account Overview</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="border border-gray-200 rounded p-4">
-              <h3 className="font-bold text-gray-700 mb-2">Operation Name</h3>
-              <p>{accountDetails.operationName}</p>
+            <div className="border border-gray-200 dark:border-gray-700 rounded p-4 dark:bg-gray-800">
+              <h3 className="font-bold text-gray-700 dark:text-gray-300 mb-2">Operation Name</h3>
+              <p className="dark:text-white">{accountDetails.operationName}</p>
             </div>
-            <div className="border border-gray-200 rounded p-4">
-              <h3 className="font-bold text-gray-700 mb-2">Operation Type</h3>
-              <p>{accountDetails.operationType}</p>
+            <div className="border border-gray-200 dark:border-gray-700 rounded p-4 dark:bg-gray-800">
+              <h3 className="font-bold text-gray-700 dark:text-gray-300 mb-2">Operation Type</h3>
+              <p className="dark:text-white">{accountDetails.operationType}</p>
             </div>
-            <div className="border border-gray-200 rounded p-4">
-              <h3 className="font-bold text-gray-700 mb-2">State</h3>
-              <p>{accountDetails.state}</p>
+            <div className="border border-gray-200 dark:border-gray-700 rounded p-4 dark:bg-gray-800">
+              <h3 className="font-bold text-gray-700 dark:text-gray-300 mb-2">State</h3>
+              <p className="dark:text-white">{accountDetails.state}</p>
             </div>
-            <div className="border border-gray-200 rounded p-4">
-              <h3 className="font-bold text-gray-700 mb-2">Account Status</h3>
-              <p className={accountDetails.status === 'Active' ? 'text-green-600' : 'text-red-600'}>
+            <div className="border border-gray-200 dark:border-gray-700 rounded p-4 dark:bg-gray-800">
+              <h3 className="font-bold text-gray-700 dark:text-gray-300 mb-2">Account Status</h3>
+              <p className={accountDetails.status === 'Active' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
                 {accountDetails.status}
               </p>
             </div>
-            <div className="border border-gray-200 rounded p-4">
-              <h3 className="font-bold text-gray-700 mb-2">Last Login</h3>
-              <p>{accountDetails.lastLogin}</p>
+            <div className="border border-gray-200 dark:border-gray-700 rounded p-4 dark:bg-gray-800">
+              <h3 className="font-bold text-gray-700 dark:text-gray-300 mb-2">Last Login</h3>
+              <p className="dark:text-white">{accountDetails.lastLogin}</p>
             </div>
           </div>
         </div>
       </div>
       
       {showQuerySummary && selectedQuery ? (
-        <div className="bg-white p-6 rounded-lg shadow-md mb-8">
+        <div className="bg-white dark:bg-dark-surface p-6 rounded-lg shadow-md mb-8">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-navy-blue">Conversation Summary</h2>
+            <h2 className="text-xl font-bold text-navy-blue dark:text-white">Conversation Summary</h2>
             <div className="flex space-x-4">
               <button
                 onClick={() => navigateTo(`fullConversation/${selectedQuery.id}`)}
-                className="text-navy-blue hover:text-blue-700"
+                className="text-navy-blue dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
               >
                 View Full Conversation
               </button>
               <button 
                 onClick={handleCloseQuerySummary}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
               >
                 Close
               </button>
             </div>
           </div>
           
-          <div className="border-b border-gray-200 pb-4 mb-4">
-            <div className="text-sm text-gray-500">
+          <div className="border-b border-gray-200 dark:border-gray-700 pb-4 mb-4">
+            <div className="text-sm text-gray-500 dark:text-gray-400">
               <span className="flex items-center">
                 <Clock className="h-4 w-4 mr-1" />
                 {formatDateTime(selectedQuery.created_at || selectedQuery.timestamp || '')}
               </span>
             </div>
-            <p className="font-medium mt-1">{selectedQuery.query_text || selectedQuery.query}</p>
+            <p className="font-medium mt-1 dark:text-white">{selectedQuery.query_text || selectedQuery.query}</p>
           </div>
           
-          <div className="bg-gray-50 p-4 rounded">
-            <h3 className="font-medium mb-2">AI Response:</h3>
-            <p className="text-gray-700 whitespace-pre-wrap">{selectedQuery.response_text || selectedQuery.response}</p>
+          <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded">
+            <h3 className="font-medium mb-2 dark:text-white">AI Response:</h3>
+            <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{selectedQuery.response_text || selectedQuery.response}</p>
           </div>
           
           {selectedQuery.full_conversation && (
             <button
               onClick={() => navigateTo(`fullConversation/${selectedQuery.id}`)}
-              className="mt-4 text-navy-blue hover:underline"
+              className="mt-4 text-navy-blue dark:text-blue-400 hover:underline"
             >
               View Full Conversation
             </button>
@@ -526,9 +481,9 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow-md">
+          <div className="bg-white dark:bg-dark-surface p-6 rounded-lg shadow-md">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-navy-blue">Recent AI Queries</h2>
+              <h2 className="text-xl font-bold text-navy-blue dark:text-white">Recent AI Queries</h2>
               <div className="flex items-center space-x-3">
                 {queryLogs.length > 0 && (
                   <button
@@ -539,15 +494,10 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
                         // Use the new deleteAllQueries function
                         deleteAllQueries()
                           .then((result) => {
-                            console.log(`Successfully deleted ${result.count} queries`);
                             setQueryLogs([]);
                             setLocalError(null);
-                            
-                            // Remove the page refresh
-                            // window.location.reload();
                           })
                           .catch(error => {
-                            console.error('Error deleting all queries:', error);
                             setLocalError('Failed to delete all conversations. Please try again.');
                           })
                           .finally(() => {
@@ -555,7 +505,7 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
                           });
                       }
                     }}
-                    className="text-red-600 hover:text-red-800 text-sm flex items-center"
+                    className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 text-sm flex items-center"
                   >
                     <Trash2 className="h-3 w-3 mr-1" />
                     Delete All
@@ -563,7 +513,7 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
                 )}
                 <button 
                   onClick={() => handleNavigation('allQueries')}
-                  className="text-navy-blue hover:underline text-sm"
+                  className="text-navy-blue dark:text-blue-400 hover:underline text-sm"
                 >
                   View All
                 </button>
@@ -573,27 +523,27 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
             {queryLogs.length > 0 ? (
               <div className="space-y-4">
                 {queryLogs.slice(0, 3).map((log, index) => (
-                  <div key={index} className="border-b border-gray-200 pb-3 last:border-b-0 last:pb-0">
+                  <div key={index} className="border-b border-gray-200 dark:border-gray-700 pb-3 last:border-b-0 last:pb-0">
                     <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center text-sm text-gray-500">
+                      <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
                         <Clock className="h-4 w-4 mr-1" />
                         <span>{formatRelativeTime(log.created_at || '')}</span>
                       </div>
                       <button
                         onClick={(e) => handleDeleteQuery(log.id, e)}
-                        className="text-gray-400 hover:text-red-500"
+                        className="text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400"
                         title="Delete conversation"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
-                    <p className="font-medium truncate">{log.query_text}</p>
-                    <div className="mt-2 text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                    <p className="font-medium truncate dark:text-white">{log.query_text}</p>
+                    <div className="mt-2 text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 p-2 rounded">
                       <p className="line-clamp-2">{log.response_text || 'Summary not available'}</p>
                     </div>
                     <button
                       onClick={() => handleViewQuery(log.id)}
-                      className="text-sm text-navy-blue hover:underline mt-1"
+                      className="text-sm text-navy-blue dark:text-blue-400 hover:underline mt-1"
                     >
                       View Details
                     </button>
@@ -602,11 +552,11 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
               </div>
             ) : (
               <div className="text-center py-6">
-                <p className="text-gray-500 mb-3">No recent queries</p>
-                <p className="text-sm text-gray-600 mb-4">Start a conversation with the AI assistant to see your query history here.</p>
+                <p className="text-gray-500 dark:text-gray-400 mb-3">No recent queries</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Start a conversation with the AI assistant to see your query history here.</p>
                 <button 
                   onClick={() => handleNavigation('search')}
-                  className="bg-navy-blue text-white py-2 px-4 rounded"
+                  className="bg-navy-blue dark:bg-blue-700 text-white py-2 px-4 rounded hover:bg-blue-800 dark:hover:bg-blue-600 transition-colors duration-200"
                 >
                   <Search className="h-4 w-4 inline mr-2" />
                   Ask About Regulations
@@ -615,27 +565,24 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
             )}
           </div>
           
-          <div className="bg-white p-6 rounded-lg shadow-md">
+          <div className="bg-white dark:bg-dark-surface p-6 rounded-lg shadow-md">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-navy-blue">Document Library</h2>
+              <h2 className="text-xl font-bold text-navy-blue dark:text-white">Document Library</h2>
               {documents.length > 0 && (
                 <button 
                   onClick={async () => {
-                    documentLogger.docLog('Manual document refresh requested');
                     try {
                       setIsLoading(true);
                       await documentService.refreshDocumentCache();
                       const userDocuments = await documentService.listDocuments();
                       setDocuments(userDocuments);
-                      documentLogger.docSuccess('Manual document refresh completed', { count: userDocuments.length });
                     } catch (err) {
-                      documentLogger.docError('Manual document refresh failed', { error: err });
                       setLocalError('Failed to refresh documents. Please try again.');
                     } finally {
                       setIsLoading(false);
                     }
                   }}
-                  className="text-sm text-navy-blue hover:underline flex items-center"
+                  className="text-sm text-navy-blue dark:text-blue-400 hover:underline flex items-center"
                 >
                   <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -645,65 +592,33 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo, preloadedDocuments = 
               )}
             </div>
             
-            {/* Add Debug Button */}
-            {false && (
-              <button 
-                onClick={async () => {
-                  try {
-                    setIsLoading(true);
-                    const api = (await import('../services/api')).default;
-                    console.log('[DEBUG] Token being used:', localStorage.getItem('token'));
-                    const response = await api.get('/documents/list');
-                    console.log('[DEBUG RESPONSE]', response);
-                    console.log('[DEBUG] Documents from API:', response.data);
-                    
-                    if (response.data && Array.isArray(response.data.documents)) {
-                      console.log(`[DEBUG] Found ${response.data.documents.length} documents in direct API call`);
-                      alert(`Found ${response.data.documents.length} documents. Check console for details.`);
-                    } else {
-                      console.log('[DEBUG] Unexpected response format:', response.data);
-                      alert('Unexpected response format. Check console.');
-                    }
-                  } catch (err: any) {
-                    console.error('[DEBUG] Error calling API directly:', err);
-                    alert(`Error: ${err.message}. Check console.`);
-                  } finally {
-                    setIsLoading(false);
-                  }
-                }}
-                className="mb-4 bg-gray-200 text-gray-800 px-3 py-1 text-xs rounded"
-              >
-                Debug Documents
-              </button>
-            )}
-            
             {/* Improve document display with better containment */}
             <div className="grid grid-cols-1 gap-4 mt-4">
               {documents.map((doc) => (
-                <div key={doc.id} className="bg-gray-50 rounded-lg border border-gray-200 p-4">
+                <div key={doc.id} className="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
                   <div className="flex justify-between items-center">
                     <div className="flex-1 mr-4">
                       <h3 
-                        className="text-md font-semibold truncate text-blue-600 hover:text-blue-800 cursor-pointer flex items-center"
+                        className="text-md font-semibold truncate text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 cursor-pointer flex items-center"
                         onClick={() => handleViewDocument(doc.id)}
                       >
                         {doc.filename}
                       </h3>
-                      <div className="text-xs text-gray-500 mt-1">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         Uploaded: {formatDateTime(doc.uploaded_at)}
                       </div>
                     </div>
                     <div className="flex space-x-2 flex-shrink-0">
                       <button 
                         onClick={() => handleViewDocument(doc.id)}
-                        className="p-2 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100"
+                        className="p-2 bg-blue-50 dark:bg-blue-900 text-blue-600 dark:text-blue-400 rounded-full hover:bg-blue-100 dark:hover:bg-blue-800"
                         title="View Document"
                       >
                         <Eye size={16} />
                       </button>
                       <button
                         onClick={() => handleDeleteDocument(doc.id)}
-                        className="p-2 bg-red-50 text-red-600 rounded-full hover:bg-red-100"
+                        className="p-2 bg-red-50 dark:bg-red-900 text-red-600 dark:text-red-400 rounded-full hover:bg-red-100 dark:hover:bg-red-800"
                         title="Delete Document"
                       >
                         <Trash2 size={16} />

@@ -1,6 +1,12 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
-interface ModelSettings {
+export interface ModelSettings {
+  // New unified fields
+  apiKey: string;
+  provider: string; // 'auto', 'openai', 'anthropic', 'google'
+  otherApiUrl: string;
+  
+  // Legacy fields (kept for backward compatibility)
   localModelUrl: string;
   openaiApiKey: string;
   anthropicApiKey: string;
@@ -16,6 +22,12 @@ interface ModelContextType {
 }
 
 const defaultSettings: ModelSettings = {
+  // New unified fields
+  apiKey: '',
+  provider: 'auto',
+  otherApiUrl: '',
+  
+  // Legacy fields
   localModelUrl: 'http://127.0.0.1:1234',
   openaiApiKey: '',
   anthropicApiKey: '',

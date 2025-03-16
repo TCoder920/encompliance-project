@@ -97,7 +97,6 @@ const AIChat: React.FC<AIChatProps> = ({
         }
         
         const data = await response.json();
-        console.log('Loaded conversation data:', data);
         
         if (data && data.messages && Array.isArray(data.messages)) {
           // Transform the API response to our message format
@@ -108,11 +107,9 @@ const AIChat: React.FC<AIChatProps> = ({
               timestamp = msg.timestamp ? new Date(msg.timestamp) : new Date();
               // Check if the date is valid
               if (isNaN(timestamp.getTime())) {
-                console.warn('Invalid timestamp in message:', msg);
                 timestamp = new Date(); // Fallback to current time
               }
             } catch (error) {
-              console.error('Error parsing timestamp:', error);
               timestamp = new Date(); // Fallback to current time
             }
             
@@ -125,12 +122,10 @@ const AIChat: React.FC<AIChatProps> = ({
             };
           });
           
-          console.log('Transformed messages:', loadedMessages);
           // Replace the default welcome message with the loaded conversation
           setMessages(loadedMessages);
         }
       } catch (err) {
-        console.error('Error loading conversation:', err);
         setError('Failed to load the conversation history. Starting a new conversation instead.');
       } finally {
         setIsProcessing(false);
@@ -142,21 +137,12 @@ const AIChat: React.FC<AIChatProps> = ({
 
   // Load initial conversation if available
   useEffect(() => {
-    console.log('AIChat initializing with:', { 
-      initialConversation: initialConversation ? 'present' : 'not present', 
-      initialQuery, 
-      showFullConversation 
-    });
-    
     if (initialConversation && Array.isArray(initialConversation) && initialConversation.length > 0) {
-      console.log('Loading initial conversation:', JSON.stringify(initialConversation));
-      
       try {
         // Convert the conversation history to the correct format
         const formattedMessages = initialConversation
           .map((msg: any, index: number) => {
             if (!msg || (!msg.content && !msg.text)) {
-              console.warn('Invalid message in conversation:', msg);
               return null;
             }
             
@@ -166,11 +152,9 @@ const AIChat: React.FC<AIChatProps> = ({
               timestamp = msg.timestamp ? new Date(msg.timestamp) : new Date();
               // Check if the date is valid
               if (isNaN(timestamp.getTime())) {
-                console.warn('Invalid timestamp in message:', msg);
                 timestamp = new Date(); // Fallback to current time
               }
             } catch (error) {
-              console.error('Error parsing timestamp:', error);
               timestamp = new Date(); // Fallback to current time
             }
             
@@ -183,23 +167,18 @@ const AIChat: React.FC<AIChatProps> = ({
           })
           .filter((msg): msg is Message => msg !== null);
         
-        console.log('Formatted messages:', formattedMessages);
-        
         if (formattedMessages.length > 0) {
           // Replace the default welcome message with the loaded conversation
           setMessages(formattedMessages);
           setTimeout(scrollToBottom, 100);
         } else {
-          console.warn('No messages were formatted from the initial conversation');
           setError('Failed to load the conversation. Starting a new conversation instead.');
         }
       } catch (error) {
-        console.error('Error formatting initial conversation:', error);
         setError('Failed to load the conversation. Starting a new conversation instead.');
       }
     } else if (initialQuery && initialQuery.trim() !== '') {
       // If we only have an initial query, set it as the input value
-      console.log('Setting initial query:', initialQuery);
       setInputValue(initialQuery);
     }
   }, [initialConversation, initialQuery]);
@@ -207,7 +186,6 @@ const AIChat: React.FC<AIChatProps> = ({
   // Auto-send initial query for Continue Conversation
   useEffect(() => {
     if (initialQuery && initialQuery.trim() !== '' && !showFullConversation) {
-      console.log('Auto-sending initial query for Continue Conversation');
       // We need to wait for the component to fully mount before sending the message
       const timer = setTimeout(() => {
         // We need to manually set the input value and then trigger the send
@@ -292,22 +270,17 @@ const AIChat: React.FC<AIChatProps> = ({
       });
       
       if (!response.data.success) {
-        console.error('Failed to save chat history:', response.data.error);
         // Log error but don't show to user
       } else {
-        console.log('Chat history saved successfully');
+        // Log success but don't show to user
       }
     } catch (error) {
-      console.error('Failed to save chat history:', error);
       // Log error but don't show to user
     }
   };
 
   const handleSendMessage = async () => {
     if (inputValue.trim() === '' || isProcessing) return;
-    
-    console.log('Sending message:', inputValue);
-    console.log('Active PDF IDs:', activePdfIds);
     
     // Add user message to the chat
     const userMessageId = messages.length + 1;
@@ -345,7 +318,6 @@ const AIChat: React.FC<AIChatProps> = ({
               if (typeof id === 'string') {
                 const parsedId = parseInt(id, 10);
                 if (isNaN(parsedId)) {
-                  console.warn(`Invalid document ID (not a number): ${id}`);
                   return null;
                 }
                 return parsedId;
@@ -355,14 +327,11 @@ const AIChat: React.FC<AIChatProps> = ({
             .filter(id => id !== null && id !== undefined)
         : [];
       
-      console.log('Valid document IDs:', validDocumentIds);
-      
       // Check if we should use streaming
       const useStreaming = selectedModel === 'local-model' || !selectedModel.startsWith('gpt-');
       
       if (useStreaming) {
         // Use streaming for local models
-        console.log('Using streaming response for local model');
         
         // Replace the loading message with a streaming message
         setMessages(prevMessages => 
@@ -406,7 +375,6 @@ const AIChat: React.FC<AIChatProps> = ({
           },
           (error) => {
             // Handle errors
-            console.error('Streaming error:', error);
             setError(error);
             setMessages(prevMessages => 
               prevMessages.map(msg => 
@@ -423,7 +391,6 @@ const AIChat: React.FC<AIChatProps> = ({
           },
           async () => {
             // Handle completion
-            console.log('Streaming complete');
             setMessages(prevMessages => 
               prevMessages.map(msg => 
                 msg.id === aiMessageId
@@ -446,7 +413,6 @@ const AIChat: React.FC<AIChatProps> = ({
         abortStreamingRef.current = abortStreaming;
       } else {
         // Use regular response for non-local models
-        console.log('Using regular response for non-local model');
         
         // Prepare the request payload
         const payload = {
@@ -455,10 +421,7 @@ const AIChat: React.FC<AIChatProps> = ({
           document_ids: validDocumentIds.length > 0 ? validDocumentIds : undefined
         };
         
-        console.log('Sending API request with payload:', payload);
-        
         // Send the query to the API using the api service
-        console.log('Making API request to chat endpoint');
         const response = await getAIResponse(
           userMessage.text,
           operationType,
@@ -466,8 +429,6 @@ const AIChat: React.FC<AIChatProps> = ({
           selectedModel,
           validDocumentIds
         );
-        
-        console.log('Received API response:', response);
         
         // Queue the AI response for typewriter effect
         typewriterQueueRef.current = {
@@ -482,7 +443,6 @@ const AIChat: React.FC<AIChatProps> = ({
         await saveChatHistory(userMessage.text, response);
       }
     } catch (error) {
-      console.error('Error sending message:', error);
       setError(error instanceof Error ? error.message : 'An unknown error occurred');
       
       // Update the loading message to show the error
@@ -533,146 +493,6 @@ const AIChat: React.FC<AIChatProps> = ({
             type="error"
             onClose={() => setError(null)}
           />
-        </div>
-      )}
-      
-      {/* Debug button - only visible in development */}
-      {false && process.env.NODE_ENV === 'development' && (
-        <div className="px-4 pt-2 flex space-x-2">
-          <button
-            onClick={async () => {
-              try {
-                console.log("Checking available documents...");
-                console.log("Active PDF IDs:", activePdfIds);
-                
-                // Check what documents are available
-                const response = await api.get('/documents/debug');
-                console.log("Available documents:", response.data);
-                
-                // Set a message with the document info
-                const userDocs = response.data.user_documents || [];
-                const allDocs = response.data.all_documents || [];
-                
-                // Format the document IDs that will be sent to the API
-                const validDocumentIds = activePdfIds && activePdfIds.length > 0 
-                  ? activePdfIds
-                      .map(id => {
-                        if (typeof id === 'string') {
-                          const parsedId = parseInt(id, 10);
-                          if (isNaN(parsedId)) {
-                            return `${id} (invalid - not a number)`;
-                          }
-                          return parsedId;
-                        }
-                        return id;
-                      })
-                  : [];
-                
-                const message = `
-DEBUG INFORMATION:
-
-User ID: ${response.data.user_id}
-
-Available documents:
-- User documents (${userDocs.length}):
-${userDocs.map((d: {id: number, filename: string, filepath: string}) => 
-  `  ID: ${d.id}, Filename: ${d.filename}, Path: ${d.filepath}`
-).join('\n')}
-
-- All documents (${allDocs.length}):
-${allDocs.map((d: {id: number, filename: string, filepath: string}) => 
-  `  ID: ${d.id}, Filename: ${d.filename}, Path: ${d.filepath}`
-).join('\n')}
-
-- Active PDF IDs that will be sent to API: 
-${validDocumentIds.length > 0 ? validDocumentIds.join(', ') : 'none'}
-                `;
-                
-                // Add a message to the chat
-                setMessages(prevMessages => [
-                  ...prevMessages,
-                  {
-                    id: prevMessages.length + 1,
-                    text: message,
-                    sender: 'ai',
-                    timestamp: new Date()
-                  }
-                ]);
-              } catch (err) {
-                console.error("Error checking documents:", err);
-                setError("Failed to check available documents");
-              }
-            }}
-            className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded mb-2"
-          >
-            Debug Documents
-          </button>
-          
-          <button
-            onClick={async () => {
-              try {
-                if (!activePdfIds || activePdfIds.length === 0) {
-                  setError("No document IDs available to test");
-                  return;
-                }
-                
-                // Format the document IDs that will be sent to the API
-                const validDocumentIds = activePdfIds
-                  .map(id => typeof id === 'string' ? parseInt(id, 10) : id)
-                  .filter(id => !isNaN(id));
-                
-                if (validDocumentIds.length === 0) {
-                  setError("No valid document IDs to test");
-                  return;
-                }
-                
-                console.log("Testing document extraction for IDs:", validDocumentIds);
-                
-                // Add a loading message
-                const messageId = messages.length + 1;
-                setMessages(prevMessages => [
-                  ...prevMessages,
-                  {
-                    id: messageId,
-                    text: `Testing document extraction for IDs: ${validDocumentIds.join(', ')}...`,
-                    sender: 'ai',
-                    isLoading: true,
-                    timestamp: new Date()
-                  }
-                ]);
-                
-                // Use the new test-extraction endpoint
-                const response = await api.post('/documents/test-extraction', {
-                  document_ids: validDocumentIds
-                });
-                
-                console.log("Test document extraction response:", response.data);
-                
-                // Update the message with the result
-                setMessages(prevMessages => 
-                  prevMessages.map(msg => 
-                    msg.id === messageId
-                      ? {
-                          ...msg,
-                          text: `Document extraction test result:\n\n${
-                            response.data.success 
-                              ? `Successfully extracted ${response.data.text_length} characters of text.\n\nFirst 500 characters:\n${response.data.text.substring(0, 500)}...`
-                              : `Error: ${response.data.error}\n\n${response.data.text}`
-                          }`,
-                          isLoading: false
-                        }
-                      : msg
-                  )
-                );
-              } catch (err) {
-                console.error("Error testing document extraction:", err);
-                setError("Failed to test document extraction");
-              }
-            }}
-            className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded mb-2"
-          >
-            Test Document Extraction
-          </button>
         </div>
       )}
       

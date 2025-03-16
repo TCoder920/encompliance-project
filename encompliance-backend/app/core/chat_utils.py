@@ -1,7 +1,7 @@
 import os
 from typing import List, Dict, Any, Optional
 from app.services.document_service import get_document_context, extract_text_from_pdf
-from app.core.config import get_settings
+from app.core.config import get_settings, SYSTEM_PROMPT
 from sqlalchemy.orm import Session
 
 settings = get_settings()
@@ -44,6 +44,9 @@ async def enhance_system_message_with_document_context(
         enhanced_message += "Here are the relevant documents for reference:\n\n"
         enhanced_message += document_context
         
+        # Add instruction to reference documents by title, not ID
+        enhanced_message += "\n\nIMPORTANT: Always refer to documents by their titles (e.g., 'Minimum Standards for Child-Care Centers'), NOT by ID numbers. When citing document content, use the document's title in your response."
+        
         print(f"Enhanced system message with {len(document_context)} characters of document context")
         return enhanced_message
     except Exception as e:
@@ -84,7 +87,7 @@ def enhance_system_message_with_pdf_context(
     
     enhanced_message += document_context
     
-    enhanced_message += "\n\nYou MUST acknowledge and cite the content from ALL provided documents in your responses, especially those marked as IMPORTANT. If asked about a specific document by name (like 'real test.pdf'), you MUST directly quote its contents in your response. Do not ignore any document, no matter how small."
+    enhanced_message += "\n\nYou MUST acknowledge and cite the content from ALL provided documents in your responses, especially those marked as IMPORTANT. If asked about a specific document by name (like 'Minimum Standards for Child-Care Centers'), you MUST directly quote its contents in your response. Always refer to documents by their titles, NOT by ID numbers. Do not ignore any document, no matter how small."
     
     print(f"Enhanced system message with document context. Total length: {len(enhanced_message)}")
     print(f"Document context preview: {document_context[:500]}...")
@@ -141,14 +144,35 @@ def get_compliance_system_message(operation_type: str) -> str:
     Returns:
         System message
     """
-    return f"""You are a compliance assistant for {operation_type} operations. 
-Your job is to provide accurate, helpful information about compliance regulations and requirements.
-
-When answering questions:
-1. Be specific about regulatory requirements, including citing specific minimum standards when possible.
-2. If you are referencing information from provided documents, be clear about which document you're using.
-3. If you don't know the answer or don't have enough information, be honest and say so.
-4. Focus on being helpful rather than just technically correct.
-5. Provide practical advice on how to comply with regulations when appropriate.
-
-Always consider the context of {operation_type} operations in your responses.""" 
+    # Start with the universal system prompt
+    system_message = SYSTEM_PROMPT
+    
+    # Add operation-specific instructions
+    if operation_type.lower() == "daycare":
+        system_message += """
+        
+Specific to Childcare Facilities:
+- Focus on childcare facility regulations and compliance requirements.
+- Consider state-specific regulations when mentioned.
+- Provide practical implementation advice for compliance measures.
+- When discussing safety measures, prioritize child welfare above all else.
+"""
+    elif operation_type.lower() == "residential":
+        system_message += """
+        
+Specific to Residential Care Facilities:
+- Focus on residential care facility regulations and compliance requirements.
+- Consider both federal and state-specific regulations when applicable.
+- Provide practical implementation advice for compliance measures.
+- When discussing safety measures, prioritize resident welfare and dignity.
+"""
+    else:
+        system_message += f"""
+        
+Specific to {operation_type.title()} Operations:
+- Focus on {operation_type} regulations and compliance requirements.
+- Consider both federal and state-specific regulations when applicable.
+- Provide practical implementation advice for compliance measures.
+"""
+    
+    return system_message 

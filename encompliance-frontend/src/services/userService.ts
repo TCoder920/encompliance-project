@@ -29,14 +29,10 @@ export interface UserUpdateData {
 export const userService = {
   async getCurrentUser(): Promise<UserData> {
     try {
-      // Use the new getUserInfo method which tries multiple approaches
-      console.log('Getting current user with getUserInfo method');
-      return await authApi.getUserInfo();
+      const response = await api.get('/users/me');
+      return response.data;
     } catch (error) {
-      console.error('All getUserInfo attempts failed:', error);
-      // If we can't get the user, clear the token and throw
-      localStorage.removeItem('token');
-      throw new Error('Failed to authenticate user. Please log in again.');
+      throw new Error('Failed to get current user');
     }
   },
   
@@ -45,26 +41,12 @@ export const userService = {
     return response.data;
   },
   
-  // Special debug method
-  async testAuth(): Promise<any> {
-    try {
-      const response = await api.get('/users/auth-debug');
-      return response.data;
-    } catch (error) {
-      console.error('Auth debug error:', error);
-      throw error;
-    }
-  },
-  
   async deleteAccount(): Promise<{ message: string }> {
     try {
       const response = await api.delete('/users/me');
-      // Clear auth token after successful deletion
-      localStorage.removeItem('token');
       return response.data;
     } catch (error) {
-      console.error('Error deleting account:', error);
-      throw error;
+      throw new Error('Failed to delete account');
     }
   }
 }; 

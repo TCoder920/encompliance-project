@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { Shield, Home, LogIn, User, Settings } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import UniversalModelSelector from './UniversalModelSelector';
+import ThemeToggle from './ThemeToggle';
 
 interface HeaderProps {
   navigateTo: (page: string) => void;
@@ -17,7 +18,7 @@ const Header: React.FC<HeaderProps> = ({ navigateTo, currentPage }) => {
   }, [isAuthenticated]);
 
   return (
-    <header className="bg-navy-blue text-white shadow-md">
+    <header className="bg-navy-blue dark:bg-dark-surface text-white shadow-md transition-colors duration-1000">
       <div className="container mx-auto px-4 py-3">
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-2 cursor-pointer" onClick={() => navigateTo('home')}>
@@ -49,7 +50,8 @@ const Header: React.FC<HeaderProps> = ({ navigateTo, currentPage }) => {
                   <User className="h-5 w-5" />
                   <span>User Profile</span>
                 </button>
-                <div className="ml-2 border-l border-gray-600 pl-2">
+                <div className="ml-2 border-l border-gray-600 pl-2 flex items-center space-x-2">
+                  <ThemeToggle />
                   <UniversalModelSelector />
                 </div>
                 <button 
@@ -57,13 +59,16 @@ const Header: React.FC<HeaderProps> = ({ navigateTo, currentPage }) => {
                     logout();
                     navigateTo('home');
                   }}
-                  className="bg-white text-navy-blue px-4 py-2 rounded font-bold hover:bg-blue-100 transition duration-200"
+                  className="bg-white text-navy-blue dark:bg-gray-700 dark:text-white px-4 py-2 rounded font-bold hover:bg-blue-100 dark:hover:bg-gray-600 transition duration-200"
                 >
                   Logout
                 </button>
               </>
             ) : (
               <>
+                <div className="flex items-center space-x-2">
+                  <ThemeToggle />
+                </div>
                 <button
                   onClick={() => navigateTo('login')}
                   className="flex items-center space-x-1 text-white hover:text-blue-300"
@@ -73,7 +78,7 @@ const Header: React.FC<HeaderProps> = ({ navigateTo, currentPage }) => {
                 </button>
                 <button
                   onClick={() => navigateTo('signup')}
-                  className="bg-white text-navy-blue px-4 py-2 rounded font-bold hover:bg-blue-100 transition duration-200"
+                  className="bg-white text-navy-blue dark:bg-gray-700 dark:text-white px-4 py-2 rounded font-bold hover:bg-blue-100 dark:hover:bg-gray-600 transition duration-200"
                 >
                   Sign Up
                 </button>
@@ -81,7 +86,8 @@ const Header: React.FC<HeaderProps> = ({ navigateTo, currentPage }) => {
             )}
           </nav>
           
-          <div className="md:hidden">
+          <div className="md:hidden flex items-center space-x-2">
+            <ThemeToggle />
             {/* Mobile menu button would go here */}
             <button className="text-white">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">

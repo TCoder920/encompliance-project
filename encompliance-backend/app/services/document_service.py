@@ -643,25 +643,25 @@ async def get_document_context(doc_ids: List[int], db: Session = Depends(get_db)
         # Add document titles first
         titles_section = []
         for doc in sorted_documents:
-            titles_section.append(f"DOCUMENT {doc['id']}: {doc['title']}")
+            titles_section.append(f"{doc['title']}")
         
         # Add chapters section next
         chapters_section = []
         for doc in sorted_documents:
             if doc['chapters']:
-                chapters_section.append(f"--- CHAPTERS FROM {doc['title']} (ID: {doc['id']}) ---\n{doc['chapters']}")
+                chapters_section.append(f"--- CHAPTERS FROM {doc['title']} ---\n{doc['chapters']}")
         
         # Add headings section next
         headings_section = []
         for doc in sorted_documents:
             if doc['headings']:
-                headings_section.append(f"--- HEADINGS FROM {doc['title']} (ID: {doc['id']}) ---\n{doc['headings']}")
+                headings_section.append(f"--- HEADINGS FROM {doc['title']} ---\n{doc['headings']}")
         
         # Add main content last
         content_section = []
         for doc in sorted_documents:
             # Build full document structure
-            doc_header = f"--- DOCUMENT CONTENT: {doc['title']} (ID: {doc['id']}) ---"
+            doc_header = f"--- DOCUMENT CONTENT: {doc['title']} ---"
             
             # Highlight shorter documents (less than 1000 characters)
             if doc['length'] < 1000:

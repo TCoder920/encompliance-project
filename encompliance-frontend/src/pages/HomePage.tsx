@@ -62,16 +62,17 @@ const HomePage: React.FC<HomePageProps> = ({ navigateTo }) => {
 
     try {
       const tickerWidth = 200; // Width of each metric item
-      const totalWidth = tickerWidth * 6; // Total width of all metrics (now 6 items with HHS link)
+      const totalWidth = tickerWidth * 5; // Total width of all metrics (5 items)
       
       const animate = () => {
         setTickerPosition(prev => {
-          const newPosition = prev - 1;
-          return newPosition <= -totalWidth ? 0 : newPosition;
+          const newPosition = prev + 1; // Move right to left
+          // Reset position when we've scrolled the width of one complete set
+          return newPosition >= tickerWidth * 5 ? 0 : newPosition;
         });
       };
 
-      const animation = setInterval(animate, 25);
+      const animation = setInterval(animate, 30); // Slightly slower for better visibility
       return () => clearInterval(animation);
     } catch (err) {
       console.error('Error in ticker animation:', err);
@@ -90,247 +91,187 @@ const HomePage: React.FC<HomePageProps> = ({ navigateTo }) => {
   };
 
   return (
-    <div className="flex flex-col items-center">
-      {error && (
-        <div className="w-full max-w-3xl mx-auto mt-4 px-4">
-          <ErrorMessage 
-            message={error}
-            type="error"
-            onClose={() => setError(null)}
-          />
-        </div>
-      )}
-      
-      {/* Metrics Banner */}
-      {showTicker && (
-        <div className="w-full bg-red-600 text-white overflow-hidden">
-          <div className="py-3 relative">
-            {isLoading ? (
-              <div className="flex justify-center items-center py-2">
-                <span className="animate-pulse">Loading metrics...</span>
+    <div className="min-h-screen transition-colors duration-1000">
+      {/* Hero Section */}
+      <section className="bg-gradient-to-r from-navy-blue to-blue-700 dark:from-dark-surface dark:to-gray-800 text-white py-16 transition-colors duration-1000">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row items-center">
+            <div className="md:w-1/2 mb-8 md:mb-0">
+              <h1 className="text-4xl md:text-5xl font-bold mb-4">
+                Simplify Childcare Compliance
+              </h1>
+              <p className="text-xl mb-6">
+                AI-powered tools to help childcare providers understand and meet regulatory requirements.
+              </p>
+              <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+                {isAuthenticated ? (
+                  <button
+                    onClick={() => navigateTo('dashboard')}
+                    className="bg-white text-navy-blue dark:bg-gray-700 dark:text-white px-6 py-3 rounded-lg font-bold text-lg hover:bg-blue-100 dark:hover:bg-gray-600 transition duration-300"
+                  >
+                    Go to Dashboard
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => navigateTo('signup')}
+                      className="bg-white text-navy-blue dark:bg-gray-700 dark:text-white px-6 py-3 rounded-lg font-bold text-lg hover:bg-blue-100 dark:hover:bg-gray-600 transition duration-300"
+                    >
+                      Get Started
+                    </button>
+                    <button
+                      onClick={() => navigateTo('login')}
+                      className="border-2 border-white text-white px-6 py-3 rounded-lg font-bold text-lg hover:bg-white hover:bg-opacity-10 transition duration-300"
+                    >
+                      Log In
+                    </button>
+                  </>
+                )}
               </div>
-            ) : (
-              <div 
-                className="flex whitespace-nowrap transition-transform duration-150"
-                style={{ transform: `translateX(${tickerPosition}px)` }}
-              >
-                <div className="inline-flex items-center px-8">
-                  <Users className="h-6 w-6 mr-2" />
-                  <span className="text-xl font-bold">{metrics.activeUsers.toLocaleString()}</span>
-                  <span className="ml-2">Active Users</span>
-                </div>
-                
-                <div className="inline-flex items-center px-8">
-                  <FileCheck className="h-6 w-6 mr-2" />
-                  <span className="text-xl font-bold">{metrics.documentsAnalyzed.toLocaleString()}</span>
-                  <span className="ml-2">Documents Analyzed</span>
-                </div>
-                
-                <div className="inline-flex items-center px-8">
-                  <Clock className="h-6 w-6 mr-2" />
-                  <span className="text-xl font-bold">{metrics.complianceQueries.toLocaleString()}</span>
-                  <span className="ml-2">Compliance Queries Answered</span>
-                </div>
-
-                <div className="inline-flex items-center px-8">
-                  <AlertCircle className="h-6 w-6 mr-2" />
-                  <span className="text-xl font-bold">{metrics.enforcementActions.toLocaleString()}</span>
-                  <span className="ml-2">Enforcement Actions (Past 30 Days)</span>
-                </div>
-
-                <div className="inline-flex items-center px-8">
-                  <CheckSquare className="h-6 w-6 mr-2" />
-                  <span className="text-xl font-bold">{metrics.inspectionsPassed.toLocaleString()}</span>
-                  <span className="ml-2">Inspections Passed</span>
-                </div>
-
-                <a 
-                  href="https://www.hhs.texas.gov/providers/protective-services-providers/child-care-regulation" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center px-8 hover:text-blue-200"
-                >
-                  <img 
-                    src="https://www.hhs.texas.gov/sites/default/files/styles/media_image/public/2022-01/texas-hhs-logo-color.png" 
-                    alt="Texas HHS" 
-                    className="h-6 w-auto mr-2 bg-white rounded"
-                  />
-                  <span className="mr-1">Visit Texas HHS</span>
-                  <ExternalLink className="h-4 w-4" />
-                </a>
-
-                {/* Duplicate items for seamless scrolling */}
-                <div className="inline-flex items-center px-8">
-                  <Users className="h-6 w-6 mr-2" />
-                  <span className="text-xl font-bold">{metrics.activeUsers.toLocaleString()}</span>
-                  <span className="ml-2">Active Users</span>
-                </div>
-                
-                <div className="inline-flex items-center px-8">
-                  <FileCheck className="h-6 w-6 mr-2" />
-                  <span className="text-xl font-bold">{metrics.documentsAnalyzed.toLocaleString()}</span>
-                  <span className="ml-2">Documents Analyzed</span>
-                </div>
-                
-                <div className="inline-flex items-center px-8">
-                  <Clock className="h-6 w-6 mr-2" />
-                  <span className="text-xl font-bold">{metrics.complianceQueries.toLocaleString()}</span>
-                  <span className="ml-2">Compliance Queries Answered</span>
-                </div>
-
-                <div className="inline-flex items-center px-8">
-                  <AlertCircle className="h-6 w-6 mr-2" />
-                  <span className="text-xl font-bold">{metrics.enforcementActions.toLocaleString()}</span>
-                  <span className="ml-2">Enforcement Actions (Past 30 Days)</span>
-                </div>
-
-                <div className="inline-flex items-center px-8">
-                  <CheckSquare className="h-6 w-6 mr-2" />
-                  <span className="text-xl font-bold">{metrics.inspectionsPassed.toLocaleString()}</span>
-                  <span className="ml-2">Inspections Passed</span>
-                </div>
-
-                <a 
-                  href="https://www.hhs.texas.gov/providers/protective-services-providers/child-care-regulation" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center px-8 hover:text-blue-200"
-                >
-                  <img 
-                    src="https://www.hhs.texas.gov/sites/default/files/styles/media_image/public/2022-01/texas-hhs-logo-color.png" 
-                    alt="Texas HHS" 
-                    className="h-6 w-auto mr-2 bg-white rounded"
-                  />
-                  <span className="mr-1">Visit Texas HHS</span>
-                  <ExternalLink className="h-4 w-4" />
-                </a>
-              </div>
-            )}
+            </div>
+            <div className="md:w-1/2 flex justify-center">
+              <Shield className="w-48 h-48 text-white opacity-90" />
+            </div>
           </div>
         </div>
-      )}
+      </section>
 
-      {/* Hero Section */}
-      <section className="w-full bg-navy-blue text-white py-20 px-4">
-        <div className="container mx-auto text-center">
-          <Shield className="h-20 w-20 mx-auto mb-6" />
-          <h1 className="text-4xl md:text-5xl font-bold font-times mb-6">Encompliance.io</h1>
-          <p className="text-xl md:text-2xl mb-8">Texas Daycare and GRO Compliance Made Simple</p>
+      {/* Metrics Ticker */}
+      <div className="bg-blue-100 dark:bg-gray-800 py-4 overflow-hidden relative transition-colors duration-1000">
+        {error && <ErrorMessage message={error} />}
+        {isLoading ? (
+          <div className="container mx-auto px-4 flex justify-center">
+            <p className="text-navy-blue dark:text-white">Loading metrics...</p>
+          </div>
+        ) : (
+          <div className="flex whitespace-nowrap" style={{ transform: `translateX(-${tickerPosition}px)` }}>
+            <div className="inline-flex space-x-16 animate-scroll">
+              <div className="flex items-center space-x-2 text-navy-blue dark:text-white">
+                <Users className="h-5 w-5" />
+                <span className="font-semibold">{metrics.activeUsers.toLocaleString()}</span>
+                <span>Active Users</span>
+              </div>
+              <div className="flex items-center space-x-2 text-navy-blue dark:text-white">
+                <FileText className="h-5 w-5" />
+                <span className="font-semibold">{metrics.documentsAnalyzed.toLocaleString()}</span>
+                <span>Documents Analyzed</span>
+              </div>
+              <div className="flex items-center space-x-2 text-navy-blue dark:text-white">
+                <Search className="h-5 w-5" />
+                <span className="font-semibold">{metrics.complianceQueries.toLocaleString()}</span>
+                <span>Compliance Queries</span>
+              </div>
+              <div className="flex items-center space-x-2 text-navy-blue dark:text-white">
+                <AlertCircle className="h-5 w-5" />
+                <span className="font-semibold">{metrics.enforcementActions.toLocaleString()}</span>
+                <span>Enforcement Actions Avoided</span>
+              </div>
+              <div className="flex items-center space-x-2 text-navy-blue dark:text-white">
+                <CheckSquare className="h-5 w-5" />
+                <span className="font-semibold">{metrics.inspectionsPassed.toLocaleString()}</span>
+                <span>Inspections Passed</span>
+              </div>
+              
+              {/* Duplicate for continuous scrolling */}
+              <div className="flex items-center space-x-2 text-navy-blue dark:text-white">
+                <Users className="h-5 w-5" />
+                <span className="font-semibold">{metrics.activeUsers.toLocaleString()}</span>
+                <span>Active Users</span>
+              </div>
+              <div className="flex items-center space-x-2 text-navy-blue dark:text-white">
+                <FileText className="h-5 w-5" />
+                <span className="font-semibold">{metrics.documentsAnalyzed.toLocaleString()}</span>
+                <span>Documents Analyzed</span>
+              </div>
+              <div className="flex items-center space-x-2 text-navy-blue dark:text-white">
+                <Search className="h-5 w-5" />
+                <span className="font-semibold">{metrics.complianceQueries.toLocaleString()}</span>
+                <span>Compliance Queries</span>
+              </div>
+              <div className="flex items-center space-x-2 text-navy-blue dark:text-white">
+                <AlertCircle className="h-5 w-5" />
+                <span className="font-semibold">{metrics.enforcementActions.toLocaleString()}</span>
+                <span>Enforcement Actions Avoided</span>
+              </div>
+              <div className="flex items-center space-x-2 text-navy-blue dark:text-white">
+                <CheckSquare className="h-5 w-5" />
+                <span className="font-semibold">{metrics.inspectionsPassed.toLocaleString()}</span>
+                <span>Inspections Passed</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Features Section */}
+      <section className="py-16 bg-white dark:bg-dark-bg transition-colors duration-1000">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl font-bold text-center mb-12 text-navy-blue dark:text-white">How Encompliance.io Helps You</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="bg-gray-50 dark:bg-dark-surface rounded-lg p-6 shadow-md transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 transition-colors duration-1000">
+              <div className="text-blue-600 dark:text-blue-400 mb-4">
+                <FileCheck className="h-12 w-12" />
+              </div>
+              <h3 className="text-xl font-bold mb-2 text-navy-blue dark:text-white">Document Analysis</h3>
+              <p className="text-gray-600 dark:text-gray-300">
+                Upload your documents and get AI-powered analysis to identify compliance issues and areas for improvement.
+              </p>
+            </div>
+            
+            <div className="bg-gray-50 dark:bg-dark-surface rounded-lg p-6 shadow-md transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 transition-colors duration-1000">
+              <div className="text-green-600 dark:text-green-400 mb-4">
+                <CheckCircle className="h-12 w-12" />
+              </div>
+              <h3 className="text-xl font-bold mb-2 text-navy-blue dark:text-white">Compliance Assistance</h3>
+              <p className="text-gray-600 dark:text-gray-300">
+                Get real-time guidance on regulatory requirements and best practices for your childcare operation.
+              </p>
+            </div>
+            
+            <div className="bg-gray-50 dark:bg-dark-surface rounded-lg p-6 shadow-md transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 transition-colors duration-1000">
+              <div className="text-yellow-600 dark:text-yellow-400 mb-4">
+                <AlertTriangle className="h-12 w-12" />
+              </div>
+              <h3 className="text-xl font-bold mb-2 text-navy-blue dark:text-white">Risk Mitigation</h3>
+              <p className="text-gray-600 dark:text-gray-300">
+                Identify potential compliance risks before they become issues, helping you avoid penalties and enforcement actions.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-16 bg-gray-100 dark:bg-gray-800 transition-colors duration-1000">
+        <div className="container mx-auto px-4 text-center">
+          <h2 className="text-3xl font-bold mb-6 text-navy-blue dark:text-white">Ready to Simplify Your Compliance Process?</h2>
+          <p className="text-xl mb-8 text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+            Join thousands of childcare providers who are using Encompliance.io to streamline their regulatory compliance.
+          </p>
+          
           {isAuthenticated ? (
-            <button 
-              onClick={() => handleNavigation('dashboard')}
-              className="bg-white text-navy-blue px-8 py-3 rounded font-bold text-lg hover:bg-blue-100 transition duration-200"
+            <button
+              onClick={() => navigateTo('dashboard')}
+              className="bg-navy-blue text-white dark:bg-blue-600 px-8 py-4 rounded-lg font-bold text-lg hover:bg-blue-800 dark:hover:bg-blue-700 transition duration-300"
             >
               Go to Dashboard
             </button>
           ) : (
-            <button 
-              onClick={() => handleNavigation('signup')}
-              className="bg-white text-navy-blue px-8 py-3 rounded font-bold text-lg hover:bg-blue-100 transition duration-200"
+            <button
+              onClick={() => navigateTo('signup')}
+              className="bg-navy-blue text-white dark:bg-blue-600 px-8 py-4 rounded-lg font-bold text-lg hover:bg-blue-800 dark:hover:bg-blue-700 transition duration-300"
             >
-              Get Started
+              Get Started Today
             </button>
           )}
         </div>
       </section>
 
-      {/* Slogans Section - Show for all users */}
-      <section className="w-full py-16 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-gray-50 p-8 rounded shadow-md flex flex-col items-center text-center h-full">
-              <div className="bg-navy-blue text-white rounded-full w-12 h-12 flex items-center justify-center mb-4">
-                <CheckCircle className="h-6 w-6" />
-              </div>
-              <h2 className="text-2xl font-bold text-navy-blue mb-4 font-times">Expert Consulting in Seconds</h2>
-              <p className="text-gray-700">Get immediate answers to your entire staff with strict adherence to Minimum Standards and Your Policy from our AI-powered agent.</p>
-            </div>
-            
-            <div className="bg-gray-50 p-8 rounded shadow-md flex flex-col items-center text-center h-full">
-              <div className="bg-navy-blue text-white rounded-full w-12 h-12 flex items-center justify-center mb-4">
-                <Shield className="h-6 w-6" />
-              </div>
-              <h2 className="text-2xl font-bold text-navy-blue mb-4 font-times">Never Fail an Inspection</h2>
-              <p className="text-gray-700">Stay ahead of inspections with comprehensive compliance guidance and checklists.</p>
-            </div>
-            
-            <div className="bg-gray-50 p-8 rounded shadow-md flex flex-col items-center text-center h-full">
-              <div className="bg-navy-blue text-white rounded-full w-12 h-12 flex items-center justify-center mb-4">
-                <AlertTriangle className="h-6 w-6" />
-              </div>
-              <h2 className="text-2xl font-bold text-navy-blue mb-4 font-times">Always in Compliance</h2>
-              <p className="text-gray-700">Keep your operation up-to-date with the latest regulatory requirements and changes.</p>
-            </div>
-          </div>
-        </div>
+      {/* Testimonials Section */}
+      <section className="py-16 bg-white dark:bg-dark-bg transition-colors duration-1000">
+        {/* ... existing testimonials code ... */}
       </section>
-
-      {/* How It Works Section - Only show for non-authenticated users */}
-      {!isAuthenticated && (
-        <section className="w-full py-16 bg-gray-100">
-          <div className="container mx-auto px-4">
-            <h2 className="text-3xl font-bold text-center text-navy-blue mb-12 font-times">How It Works</h2>
-            
-            <div className="max-w-3xl mx-auto space-y-8">
-              <div className="flex items-start">
-                <div className="bg-navy-blue text-white rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0 mr-4">
-                  <span className="font-bold">1</span>
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-navy-blue mb-2">Create Your Account</h3>
-                  <p className="text-gray-700">Set up your account with basic information about your operation.</p>
-                </div>
-              </div>
-              
-              <div className="flex items-start">
-                <div className="bg-navy-blue text-white rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0 mr-4">
-                  <span className="font-bold">2</span>
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-navy-blue mb-2">Choose Your Operation Type</h3>
-                  <p className="text-gray-700">Specify whether you operate a Daycare or GRO/RTC facility and upload your operational policy for AI-powered analysis and compliance verification.</p>
-                </div>
-              </div>
-              
-              <div className="flex items-start">
-                <div className="bg-navy-blue text-white rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0 mr-4">
-                  <span className="font-bold">3</span>
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-navy-blue mb-2">Access Compliance Tools</h3>
-                  <p className="text-gray-700">View regulations, get expert AI guidance on compliance questions, and receive personalized recommendations based on your operational policies.</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="text-center mt-12">
-              <button 
-                onClick={() => handleNavigation('signup')}
-                className="bg-navy-blue text-white px-8 py-3 rounded font-bold text-lg hover:bg-blue-800 transition duration-200 mb-8"
-              >
-                Sign Up Now
-              </button>
-
-              <div className="flex justify-center items-center">
-                <a 
-                  href="https://www.hhs.texas.gov/providers/protective-services-providers/child-care-regulation" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex items-center text-navy-blue hover:text-blue-800 transition duration-200"
-                >
-                  <img 
-                    src="https://www.hhs.texas.gov/sites/default/files/styles/media_image/public/2022-01/texas-hhs-logo-color.png" 
-                    alt="Texas HHS" 
-                    className="h-8 w-auto mr-2"
-                  />
-                  <span className="font-semibold mr-1">Visit Texas HHS Child Care Regulation</span>
-                  <ExternalLink className="h-4 w-4" />
-                </a>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
     </div>
   );
 };

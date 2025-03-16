@@ -10,6 +10,13 @@
     'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
     'Noto Color Emoji';
   --font-times: 'Times New Roman', Times, serif;
+  
+  /* Dark mode colors */
+  --dark-bg: #121212;
+  --dark-surface: #1e1e1e;
+  --dark-border: #333333;
+  --dark-text: #e0e0e0;
+  --dark-primary: #3B82F6;
 }
 
 body {
@@ -18,6 +25,12 @@ body {
   padding: 0;
   background-color: #f0f2f5;
   color: rgba(0, 0, 0, 0.85);
+  transition: background-color 2s ease, color 2s ease;
+}
+
+.dark body {
+  background-color: var(--dark-bg);
+  color: var(--dark-text);
 }
 
 .app {
@@ -51,6 +64,11 @@ header {
   background-color: var(--navy-blue);
   color: white;
   padding: 1rem 0;
+  transition: background-color 2s ease;
+}
+
+.dark header {
+  background-color: var(--dark-surface);
 }
 
 /* Footer styles */
@@ -59,6 +77,11 @@ footer {
   background-color: var(--navy-blue);
   color: white;
   padding: 1rem 0;
+  transition: background-color 2s ease;
+}
+
+.dark footer {
+  background-color: var(--dark-surface);
 }
 
 /* Button styles */
@@ -73,16 +96,33 @@ input, select, textarea {
   border: 1px solid #d9d9d9;
   border-radius: 4px;
   transition: all 0.3s;
+  background-color: white;
+  color: rgba(0, 0, 0, 0.85);
+}
+
+.dark input, .dark select, .dark textarea {
+  background-color: var(--dark-surface);
+  border-color: var(--dark-border);
+  color: var(--dark-text);
 }
 
 input:hover, select:hover, textarea:hover {
   border-color: var(--primary);
 }
 
+.dark input:hover, .dark select:hover, .dark textarea:hover {
+  border-color: var(--dark-primary);
+}
+
 input:focus, select:focus, textarea:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
   outline: none;
+}
+
+.dark input:focus, .dark select:focus, .dark textarea:focus {
+  border-color: var(--dark-primary);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
 
 /* Markdown content styling */
@@ -156,12 +196,20 @@ input:focus, select:focus, textarea:focus {
   font-size: 0.9em;
 }
 
+.dark .markdown-content code {
+  background-color: #2d2d2d;
+}
+
 .markdown-content pre {
   background-color: #f1f1f1;
   padding: 1em;
   border-radius: 5px;
   overflow-x: auto;
   margin-bottom: 1em;
+}
+
+.dark .markdown-content pre {
+  background-color: #2d2d2d;
 }
 
 .markdown-content pre code {
@@ -182,9 +230,18 @@ input:focus, select:focus, textarea:focus {
   text-align: left;
 }
 
+.dark .markdown-content th,
+.dark .markdown-content td {
+  border-color: var(--dark-border);
+}
+
 .markdown-content th {
   background-color: #f8fafc;
   font-weight: 600;
+}
+
+.dark .markdown-content th {
+  background-color: #2d2d2d;
 }
 
 .markdown-content hr {
@@ -193,7 +250,28 @@ input:focus, select:focus, textarea:focus {
   margin: 1.5em 0;
 }
 
+.dark .markdown-content hr {
+  border-top-color: var(--dark-border);
+}
+
 .markdown-content img {
   max-width: 100%;
   height: auto;
+}
+
+/* Theme transition */
+.theme-transition {
+  animation: themeTransition 2s ease-in-out;
+}
+
+@keyframes themeTransition {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 1;
+  }
 } 
