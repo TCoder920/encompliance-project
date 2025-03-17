@@ -1,44 +1,38 @@
-# Encompliance.io Project
+# Encompliance.io
 
-This is the main repository for the Encompliance.io compliance platform.
+A comprehensive compliance management platform designed for healthcare facilities to streamline regulatory compliance processes.
 
-## Project Structure
+## Overview
 
-The project consists of three main components:
+Encompliance.io provides an end-to-end solution for healthcare facilities to manage their compliance documentation, track regulatory requirements, and ensure adherence to industry standards. The platform offers document management, compliance tracking, and reporting capabilities in a secure, user-friendly interface.
 
-- **encompliance-frontend**: React-based web application
-- **encompliance-backend**: FastAPI-based REST API
-- **encompliance-documents**: Document storage directory
+## Key Features
 
-## Document Storage
+- **Document Management**: Secure storage and organization of compliance-related documents
+- **Regulatory Tracking**: Monitor compliance status across multiple regulatory frameworks
+- **Automated Notifications**: Receive alerts for upcoming deadlines and compliance gaps
+- **Comprehensive Reporting**: Generate detailed compliance reports for audits and internal reviews
+- **User Role Management**: Granular access controls based on organizational roles
 
-All documents (PDFs) are stored in the `encompliance-documents` directory at the root of the project. This location is hardcoded in the application settings and cannot be changed.
+## Project Architecture
 
-### Document Metadata
+The application follows a modern microservices architecture:
 
-While the actual document files are stored in the `encompliance-documents` directory, the document metadata (filename, upload date, owner, etc.) is stored in the PostgreSQL database in the `pdfs` table.
+- **Frontend**: React-based single-page application with responsive design
+- **Backend**: FastAPI-based REST API with PostgreSQL database
+- **Document Storage**: Secure document repository with encryption and access controls
 
-### Document File Format
+## Security Features
 
-Documents are stored with timestamped filenames to prevent collisions, using the format:
-```
-YYYYMMDDHHMMSS_original_filename.pdf
-```
+- JWT-based authentication
+- Role-based access control
+- Encrypted storage of sensitive information
+- Comprehensive audit logging
+- HTTPS enforcement
 
-For example:
-```
-20250313035653_chapter-746-centers.pdf
-```
+## Environment Configuration
 
-## Setup Instructions
-
-See the README files in the respective directories:
-- [Frontend README](encompliance-frontend/README.md)
-- [Backend README](encompliance-backend/README.md)
-
-## Environment Variables
-
-The application requires several environment variables to be set for proper operation. A template `.env.example` file is provided at the root of the repository. Copy this file to `.env` and update the values as needed.
+The application requires environment variables for proper operation. A template `.env.example` file is provided at the root of the repository. Copy this file to `.env` and update the values accordingly.
 
 **Important**: Never commit `.env` files to the repository. They contain sensitive information such as API keys and database credentials.
 
@@ -61,9 +55,9 @@ The application requires several environment variables to be set for proper oper
 - **Backend Configuration**:
   - `BACKEND_PORT`: Port for the backend server
 
-## Running the Application
+## Deployment
 
-### Development Mode
+### Development Environment
 
 To run the complete application in development mode:
 
@@ -79,7 +73,7 @@ cd encompliance-frontend
 npm run dev
 ```
 
-### Production Mode
+### Production Deployment
 
 For production deployment, Docker is recommended:
 
@@ -93,4 +87,4 @@ docker compose down
 
 ## License
 
-MIT License 
+Proprietary and Confidential. © 2025 Encompliance.io. All rights reserved. 

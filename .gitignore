@@ -15,4 +15,8 @@ Thumbs.db
 user_settings/
 
 # Document storage
-encompliance-documents/ 
+encompliance-documents/
+
+# Local README files (keep only in local environment)
+encompliance-frontend/README.md
+encompliance-backend/README.md 
