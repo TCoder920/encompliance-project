@@ -23,13 +23,13 @@ cd ..
 
 # 3. Build Docker images
 echo "=== Building Docker images ==="
-docker-compose build
+docker compose build
 
 # 4. Start the application in detached mode
 echo "=== Starting the application ==="
-docker-compose up -d
+docker compose up -d
 
 echo "=== Application is now running in production mode ==="
 echo "Access the application at http://localhost"
-echo "To stop the application, run: docker-compose down"
-echo "To view logs, run: docker-compose logs -f" 
+echo "To stop the application, run: docker compose down"
+echo "To view logs, run: docker compose logs -f" 
