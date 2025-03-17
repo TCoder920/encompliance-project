@@ -7,6 +7,9 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 
+# Install terser for production build
+RUN npm install -D terser
+
 # Copy source code
 COPY . .
 
