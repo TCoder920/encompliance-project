@@ -19,4 +19,7 @@ encompliance-documents/
 
 # Local README files (keep only in local environment)
 encompliance-frontend/README.md
-encompliance-backend/README.md 
+encompliance-backend/README.md
+
+# Production scripts
+prepare_for_production.sh 
