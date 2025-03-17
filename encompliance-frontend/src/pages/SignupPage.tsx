@@ -3,6 +3,7 @@ import { MapPin, User, Building, Mail, Phone, Lock, Eye, EyeOff } from 'lucide-r
 import { useAuth } from '../contexts/AuthContext';
 import { SignupData } from '../services/authService';
 import ErrorMessage from '../components/ErrorMessage';
+import { themeClasses } from '../utils/themeUtils';
 
 interface SignupPageProps {
   onStateSelect?: (state: string) => void;
@@ -131,9 +132,9 @@ const SignupPage: React.FC<SignupPageProps> = ({ onStateSelect, navigateTo }) =>
   };
   
   return (
-    <div className="container mx-auto px-4 py-12 max-w-2xl">
-      <div className="bg-white rounded-lg shadow-lg p-8">
-        <h1 className="text-3xl font-bold text-navy-blue mb-6 text-center font-times">Create Your Account</h1>
+    <div className={`container mx-auto px-4 py-12 max-w-2xl ${themeClasses.layout.container}`}>
+      <div className={`rounded-lg shadow-lg p-8 ${themeClasses.bg.primary} ${themeClasses.border.primary} border`}>
+        <h1 className={`text-3xl font-bold mb-6 text-center font-times ${themeClasses.text.primary}`}>Create Your Account</h1>
         
         {localError && (
           <ErrorMessage 
@@ -155,10 +156,10 @@ const SignupPage: React.FC<SignupPageProps> = ({ onStateSelect, navigateTo }) =>
           <>
             <div className="space-y-4 mb-6">
               <div>
-                <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                <label htmlFor="fullName" className={`block text-sm font-medium mb-1 ${themeClasses.text.secondary}`}>Full Name</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-gray-400" />
+                    <User className={`h-5 w-5 ${themeClasses.text.muted}`} />
                   </div>
                   <input
                     type="text"
@@ -166,17 +167,17 @@ const SignupPage: React.FC<SignupPageProps> = ({ onStateSelect, navigateTo }) =>
                     name="fullName"
                     value={formData.fullName}
                     onChange={handleInputChange}
-                    className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:ring-navy-blue focus:border-navy-blue border p-2"
+                    className={`pl-10 block w-full rounded-md shadow-sm focus:ring-navy-blue focus:border-navy-blue border p-2 ${themeClasses.components.input}`}
                     placeholder="John Doe"
                   />
                 </div>
               </div>
               
               <div>
-                <label htmlFor="operationName" className="block text-sm font-medium text-gray-700 mb-1">Operation Name</label>
+                <label htmlFor="operationName" className={`block text-sm font-medium mb-1 ${themeClasses.text.secondary}`}>Operation Name</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Building className="h-5 w-5 text-gray-400" />
+                    <Building className={`h-5 w-5 ${themeClasses.text.muted}`} />
                   </div>
                   <input
                     type="text"
@@ -184,17 +185,17 @@ const SignupPage: React.FC<SignupPageProps> = ({ onStateSelect, navigateTo }) =>
                     name="operationName"
                     value={formData.operationName}
                     onChange={handleInputChange}
-                    className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:ring-navy-blue focus:border-navy-blue border p-2"
+                    className={`pl-10 block w-full rounded-md shadow-sm focus:ring-navy-blue focus:border-navy-blue border p-2 ${themeClasses.components.input}`}
                     placeholder="Sunshine Daycare"
                   />
                 </div>
               </div>
               
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                <label htmlFor="email" className={`block text-sm font-medium mb-1 ${themeClasses.text.secondary}`}>Email Address</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-400" />
+                    <Mail className={`h-5 w-5 ${themeClasses.text.muted}`} />
                   </div>
                   <input
                     type="email"
@@ -202,17 +203,17 @@ const SignupPage: React.FC<SignupPageProps> = ({ onStateSelect, navigateTo }) =>
                     name="email"
                     value={formData.email}
                     onChange={handleInputChange}
-                    className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:ring-navy-blue focus:border-navy-blue border p-2"
+                    className={`pl-10 block w-full rounded-md shadow-sm focus:ring-navy-blue focus:border-navy-blue border p-2 ${themeClasses.components.input}`}
                     placeholder="john@example.com"
                   />
                 </div>
               </div>
               
               <div>
-                <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                <label htmlFor="phoneNumber" className={`block text-sm font-medium mb-1 ${themeClasses.text.secondary}`}>Phone Number</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Phone className="h-5 w-5 text-gray-400" />
+                    <Phone className={`h-5 w-5 ${themeClasses.text.muted}`} />
                   </div>
                   <input
                     type="tel"
@@ -220,17 +221,17 @@ const SignupPage: React.FC<SignupPageProps> = ({ onStateSelect, navigateTo }) =>
                     name="phoneNumber"
                     value={formData.phoneNumber}
                     onChange={handleInputChange}
-                    className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:ring-navy-blue focus:border-navy-blue border p-2"
+                    className={`pl-10 block w-full rounded-md shadow-sm focus:ring-navy-blue focus:border-navy-blue border p-2 ${themeClasses.components.input}`}
                     placeholder="(123) 456-7890"
                   />
                 </div>
               </div>
               
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <label htmlFor="password" className={`block text-sm font-medium mb-1 ${themeClasses.text.secondary}`}>Password</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400" />
+                    <Lock className={`h-5 w-5 ${themeClasses.text.muted}`} />
                   </div>
                   <input
                     type={showPassword ? "text" : "password"}
@@ -238,7 +239,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ onStateSelect, navigateTo }) =>
                     name="password"
                     value={formData.password}
                     onChange={handleInputChange}
-                    className="pl-10 pr-10 block w-full rounded-md border-gray-300 shadow-sm focus:ring-navy-blue focus:border-navy-blue border p-2"
+                    className={`pl-10 pr-10 block w-full rounded-md shadow-sm focus:ring-navy-blue focus:border-navy-blue border p-2 ${themeClasses.components.input}`}
                     placeholder="••••••••"
                   />
                   <button
@@ -247,9 +248,9 @@ const SignupPage: React.FC<SignupPageProps> = ({ onStateSelect, navigateTo }) =>
                     onClick={togglePasswordVisibility}
                   >
                     {showPassword ? (
-                      <EyeOff className="h-5 w-5 text-gray-400" />
+                      <EyeOff className={`h-5 w-5 ${themeClasses.text.muted}`} />
                     ) : (
-                      <Eye className="h-5 w-5 text-gray-400" />
+                      <Eye className={`h-5 w-5 ${themeClasses.text.muted}`} />
                     )}
                   </button>
                 </div>
@@ -259,11 +260,11 @@ const SignupPage: React.FC<SignupPageProps> = ({ onStateSelect, navigateTo }) =>
             <button
               onClick={handleNextStep}
               disabled={!isFormValid()}
-              className={`w-full py-2 px-4 rounded ${
+              className={`w-full py-2 px-4 rounded transition duration-200 ${
                 isFormValid()
-                  ? 'bg-navy-blue text-white hover:bg-blue-800'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              } transition duration-200`}
+                  ? themeClasses.components.button.primary
+                  : 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+              }`}
             >
               Next
             </button>
@@ -271,7 +272,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ onStateSelect, navigateTo }) =>
         ) : (
           <>
             <div className="mb-6">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Select Your State</h2>
+              <h2 className={`text-xl font-semibold mb-4 ${themeClasses.text.primary}`}>Select Your State</h2>
               <div className="grid grid-cols-2 gap-4">
                 {states.map((state) => (
                   <button
@@ -280,10 +281,10 @@ const SignupPage: React.FC<SignupPageProps> = ({ onStateSelect, navigateTo }) =>
                     disabled={!state.available}
                     className={`p-4 border rounded-lg flex items-center justify-center ${
                       selectedState === state.name
-                        ? 'border-navy-blue bg-blue-50 text-navy-blue'
+                        ? 'border-navy-blue dark:border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-navy-blue dark:text-blue-400'
                         : state.available
-                        ? 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
-                        : 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
+                        ? 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                        : 'border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed'
                     }`}
                   >
                     <MapPin className="h-5 w-5 mr-2" />
@@ -297,18 +298,18 @@ const SignupPage: React.FC<SignupPageProps> = ({ onStateSelect, navigateTo }) =>
             <div className="flex space-x-4">
               <button
                 onClick={() => setStep(1)}
-                className="flex-1 py-2 px-4 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition duration-200"
+                className={`flex-1 py-2 px-4 border rounded ${themeClasses.border.primary} ${themeClasses.text.secondary} hover:bg-gray-50 dark:hover:bg-gray-800 transition duration-200`}
               >
                 Back
               </button>
               <button
                 onClick={handleSubmit}
                 disabled={!selectedState || isSubmitting}
-                className={`flex-1 py-2 px-4 rounded ${
+                className={`flex-1 py-2 px-4 rounded transition duration-200 ${
                   selectedState && !isSubmitting
-                    ? 'bg-navy-blue text-white hover:bg-blue-800'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                } transition duration-200`}
+                    ? themeClasses.components.button.primary
+                    : 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                }`}
               >
                 {isSubmitting ? 'Creating Account...' : 'Continue'}
               </button>
