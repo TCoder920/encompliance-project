@@ -14,8 +14,12 @@ asyncpg==0.28.0  # For async database support
 # Authentication
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
+cryptography==42.0.1  # For encrypting API keys
 # For JWT token
 python-multipart==0.0.6
 PyPDF2==3.0.1
 pdfminer.six==20221105
-sentence-transformers==2.2.2 
+sentence-transformers==2.2.2
+# For production deployment
+gunicorn==21.2.0
+uvloop==0.19.0; sys_platform != 'win32'  # Improves performance on Linux/MacOS 

@@ -49,10 +49,18 @@ app = FastAPI(
 # Add debug middleware
 app.add_middleware(RequestLoggingMiddleware)
 
+# Get frontend URL from environment with fallback
+frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
+allowed_origins = [frontend_url]
+
+# Add additional development origins if not in production
+if os.getenv("ENVIRONMENT", "development") != "production":
+    allowed_origins.extend(["http://localhost:5173", "http://127.0.0.1:5173"])
+
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],  # Allow frontend origins for different environments
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*", "Authorization", "Content-Type", "x-token", "Cache-Control", "Pragma", "Expires"],
@@ -67,7 +75,7 @@ async def add_cors_headers(request: Request, call_next):
     response = await call_next(request)
     
     # Set CORS headers
-    response.headers["Access-Control-Allow-Origin"] = "http://localhost:5173"
+    response.headers["Access-Control-Allow-Origin"] = frontend_url
     response.headers["Access-Control-Allow-Credentials"] = "true"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
     response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, x-token, Cache-Control, Pragma, Expires"
