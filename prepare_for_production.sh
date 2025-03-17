@@ -8,13 +8,13 @@ echo "=== Preparing Encompliance Application for Production ==="
 # 1. Clean up test users and data
 echo "=== Cleaning up test users and data ==="
 cd encompliance-backend
-python cleanup_users.py --confirm --all
+python3 cleanup_users.py --confirm --all
 cd ..
 
 # 2. Create database migration for user settings
 echo "=== Creating database migration for user settings ==="
 cd encompliance-backend
-python create_migration.py
+python3 create_migration.py
 cd ..
 
 # 3. Build Docker images
