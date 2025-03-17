@@ -8,13 +8,17 @@ echo "=== Preparing Encompliance Application for Production ==="
 # 1. Clean up test users and data
 echo "=== Cleaning up test users and data ==="
 cd encompliance-backend
-python3 cleanup_users.py --confirm --all
+source venv/bin/activate
+python cleanup_users.py --confirm --all
+deactivate
 cd ..
 
 # 2. Create database migration for user settings
 echo "=== Creating database migration for user settings ==="
 cd encompliance-backend
-python3 create_migration.py
+source venv/bin/activate
+python create_migration.py
+deactivate
 cd ..
 
 # 3. Build Docker images
