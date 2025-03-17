@@ -67,7 +67,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ navigateTo }) => {
   
   return (
     <div className={`container mx-auto px-4 py-12 max-w-md ${themeClasses.layout.container}`}>
-      <div className={`rounded-lg shadow-lg p-8 ${themeClasses.bg.primary} ${themeClasses.border.primary} border`}>
+      <div className={themeClasses.components.card}>
         <h1 className={`text-3xl font-bold mb-6 text-center font-times ${themeClasses.text.primary}`}>Login to Your Account</h1>
         
         {localError && (
@@ -99,7 +99,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ navigateTo }) => {
                 name="email"
                 value={formData.email}
                 onChange={handleInputChange}
-                className={`pl-10 block w-full rounded-md shadow-sm focus:ring-navy-blue focus:border-navy-blue border p-2 ${themeClasses.components.input}`}
+                className={themeClasses.components.input}
                 placeholder="john@example.com"
               />
             </div>
@@ -117,7 +117,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ navigateTo }) => {
                 name="password"
                 value={formData.password}
                 onChange={handleInputChange}
-                className={`pl-10 pr-10 block w-full rounded-md shadow-sm focus:ring-navy-blue focus:border-navy-blue border p-2 ${themeClasses.components.input}`}
+                className={`pl-10 pr-10 ${themeClasses.components.input}`}
                 placeholder="••••••••"
               />
               <button

@@ -1,0 +1,18 @@
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Development notes
+dev_notes.txt
+dev notes.txt
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# User settings
+user_settings/
+
+# Document storage
+encompliance-documents/ 

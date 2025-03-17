@@ -36,9 +36,36 @@ See the README files in the respective directories:
 - [Frontend README](encompliance-frontend/README.md)
 - [Backend README](encompliance-backend/README.md)
 
+## Environment Variables
+
+The application requires several environment variables to be set for proper operation. A template `.env.example` file is provided at the root of the repository. Copy this file to `.env` and update the values as needed.
+
+**Important**: Never commit `.env` files to the repository. They contain sensitive information such as API keys and database credentials.
+
+### Required Environment Variables
+
+- **Database Configuration**:
+  - `DB_USER`: PostgreSQL username
+  - `DB_PASSWORD`: PostgreSQL password
+  - `DB_NAME`: PostgreSQL database name
+
+- **Security**:
+  - `JWT_SECRET_KEY`: Secret key for JWT token generation
+  - `ACCESS_TOKEN_EXPIRE_MINUTES`: JWT token expiration time in minutes
+  - `ENCRYPTION_KEY`: Key used for encrypting API keys in the database
+
+- **Frontend Configuration**:
+  - `FRONTEND_PORT`: Port for the frontend server
+  - `FRONTEND_URL`: URL for the frontend server
+
+- **Backend Configuration**:
+  - `BACKEND_PORT`: Port for the backend server
+
 ## Running the Application
 
-To run the complete application:
+### Development Mode
+
+To run the complete application in development mode:
 
 1. Start the backend:
 ```bash
@@ -50,6 +77,18 @@ python -m uvicorn app.main:app --reload
 ```bash
 cd encompliance-frontend
 npm run dev
+```
+
+### Production Mode
+
+For production deployment, Docker is recommended:
+
+```bash
+# Build and start the containers
+docker compose up -d
+
+# Stop the containers
+docker compose down
 ```
 
 ## License

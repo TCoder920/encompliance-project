@@ -31,6 +31,8 @@ ENV/
 
 # Environment variables
 .env
+.env.*
+!.env.example
 
 # IDE files
 .idea/
@@ -46,4 +48,11 @@ add_test_data.py
 
 # Document storage
 encompliance-documents/
-../encompliance-documents/ 
+../encompliance-documents/
+
+# User settings
+user_settings/
+
+# Development notes
+dev_notes.txt
+dev notes.txt 

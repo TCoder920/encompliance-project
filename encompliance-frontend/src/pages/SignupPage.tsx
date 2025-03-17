@@ -133,7 +133,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ onStateSelect, navigateTo }) =>
   
   return (
     <div className={`container mx-auto px-4 py-12 max-w-2xl ${themeClasses.layout.container}`}>
-      <div className={`rounded-lg shadow-lg p-8 ${themeClasses.bg.primary} ${themeClasses.border.primary} border`}>
+      <div className={themeClasses.components.card}>
         <h1 className={`text-3xl font-bold mb-6 text-center font-times ${themeClasses.text.primary}`}>Create Your Account</h1>
         
         {localError && (
@@ -167,7 +167,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ onStateSelect, navigateTo }) =>
                     name="fullName"
                     value={formData.fullName}
                     onChange={handleInputChange}
-                    className={`pl-10 block w-full rounded-md shadow-sm focus:ring-navy-blue focus:border-navy-blue border p-2 ${themeClasses.components.input}`}
+                    className={`pl-10 ${themeClasses.components.input}`}
                     placeholder="John Doe"
                   />
                 </div>
@@ -185,7 +185,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ onStateSelect, navigateTo }) =>
                     name="operationName"
                     value={formData.operationName}
                     onChange={handleInputChange}
-                    className={`pl-10 block w-full rounded-md shadow-sm focus:ring-navy-blue focus:border-navy-blue border p-2 ${themeClasses.components.input}`}
+                    className={`pl-10 ${themeClasses.components.input}`}
                     placeholder="Sunshine Daycare"
                   />
                 </div>
@@ -203,7 +203,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ onStateSelect, navigateTo }) =>
                     name="email"
                     value={formData.email}
                     onChange={handleInputChange}
-                    className={`pl-10 block w-full rounded-md shadow-sm focus:ring-navy-blue focus:border-navy-blue border p-2 ${themeClasses.components.input}`}
+                    className={`pl-10 ${themeClasses.components.input}`}
                     placeholder="john@example.com"
                   />
                 </div>
@@ -221,7 +221,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ onStateSelect, navigateTo }) =>
                     name="phoneNumber"
                     value={formData.phoneNumber}
                     onChange={handleInputChange}
-                    className={`pl-10 block w-full rounded-md shadow-sm focus:ring-navy-blue focus:border-navy-blue border p-2 ${themeClasses.components.input}`}
+                    className={`pl-10 ${themeClasses.components.input}`}
                     placeholder="(123) 456-7890"
                   />
                 </div>
@@ -239,7 +239,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ onStateSelect, navigateTo }) =>
                     name="password"
                     value={formData.password}
                     onChange={handleInputChange}
-                    className={`pl-10 pr-10 block w-full rounded-md shadow-sm focus:ring-navy-blue focus:border-navy-blue border p-2 ${themeClasses.components.input}`}
+                    className={`pl-10 pr-10 ${themeClasses.components.input}`}
                     placeholder="••••••••"
                   />
                   <button
